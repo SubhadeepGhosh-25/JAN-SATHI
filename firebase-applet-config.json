@@ -1,0 +1,11 @@
+{
+  "projectId": "inbound-monolith-vrcrp",
+  "appId": "1:677269128181:web:7af7d3e1797d95d1eed6bc",
+  "apiKey": "AIzaSyABLBBrLMTJknfPwDBs7ppAthfDhWK8s68",
+  "authDomain": "inbound-monolith-vrcrp.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-jansathi-cf363a12-b5fa-4226-bfe7-01a7ef148c3c",
+  "storageBucket": "inbound-monolith-vrcrp.firebasestorage.app",
+  "messagingSenderId": "677269128181",
+  "measurementId": "",
+  "oAuthClientId": "677269128181-g1jh34h8a9popqrdcbsrfkmvkuopbvm1.apps.googleusercontent.com"
+}

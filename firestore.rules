@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users must be authenticated and only access their own user document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Schemes are readable by anyone, write allowed for seeding
+    match /schemes/{schemeId} {
+      allow read, write: if true;
+    }
+    
+    // savedSchemes owned by user
+    match /savedSchemes/{docId} {
+      allow read, write: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid) && (request.resource == null || request.resource.data.userId == request.auth.uid);
+    }
+    
+    // applications owned by user
+    match /applications/{appId} {
+      allow read, write: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid) && (request.resource == null || request.resource.data.userId == request.auth.uid);
+    }
+    
+    // documents owned by user
+    match /documents/{docId} {
+      allow read, write: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid) && (request.resource == null || request.resource.data.userId == request.auth.uid);
+    }
+    
+    // familyMembers owned by user
+    match /familyMembers/{memberId} {
+      allow read, write: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid) && (request.resource == null || request.resource.data.userId == request.auth.uid);
+    }
+    
+    // reminders owned by user
+    match /reminders/{reminderId} {
+      allow read, write: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid) && (request.resource == null || request.resource.data.userId == request.auth.uid);
+    }
+    
+    // notifications owned by user
+    match /notifications/{notId} {
+      allow read, write: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid) && (request.resource == null || request.resource.data.userId == request.auth.uid);
+    }
+    
+    // chat_history owned by user
+    match /chat_history/{chatId} {
+      allow read, write: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid) && (request.resource == null || request.resource.data.userId == request.auth.uid);
+    }
+  }
+}
