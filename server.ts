@@ -26,6 +26,65 @@ function getGenAI(): GoogleGenAI {
   return aiInstance;
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function callGeminiWithRetryAndFallback<T>(
+  apiCall: (modelName: string) => Promise<T>,
+  primaryModel: string = "gemini-3.5-flash",
+  fallbackModel: string = "gemini-flash-latest"
+): Promise<T> {
+  const modelsToTry = [primaryModel, fallbackModel, "gemini-3.1-flash-lite"];
+  let lastError: any = null;
+
+  for (const model of modelsToTry) {
+    let delay = 1000; // Start with 1 second delay
+    const maxAttempts = 3;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        console.log(`[Gemini API] Attempting call with model "${model}" (attempt ${attempt}/${maxAttempts})...`);
+        return await apiCall(model);
+      } catch (err: any) {
+        lastError = err;
+        const errStr = String(err.message || err).toLowerCase();
+        
+        const isTransientError =
+          errStr.includes("429") ||
+          errStr.includes("quota") ||
+          errStr.includes("rate limit") ||
+          errStr.includes("resource_exhausted") ||
+          errStr.includes("503") ||
+          errStr.includes("unavailable") ||
+          errStr.includes("high demand") ||
+          errStr.includes("too many requests") ||
+          err.status === "RESOURCE_EXHAUSTED" ||
+          err.status === "UNAVAILABLE" ||
+          err.status === 429 ||
+          err.status === 503 ||
+          err.code === 429 ||
+          err.code === 503;
+
+        if (isTransientError) {
+          console.warn(
+            `[Gemini API] Transient error (429/503) for model "${model}" on attempt ${attempt}/${maxAttempts}: ${err.message || err}. Retrying in ${delay}ms...`
+          );
+          const jitter = Math.random() * 300;
+          await sleep(delay + jitter);
+          delay *= 1.5; // Backoff
+        } else {
+          // Non-transient error (e.g. invalid request parameters) - stop retrying this model
+          console.error(`[Gemini API] Non-transient error for model "${model}":`, err);
+          break;
+        }
+      }
+    }
+    console.warn(`[Gemini API] Model "${model}" failed all attempts. Trying next model...`);
+  }
+
+  const errorDetail = lastError?.message || String(lastError);
+  throw new Error(`Gemini API services are temporarily busy or limited. Please try again. Detailed error: ${errorDetail}`);
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -57,17 +116,20 @@ Your goals:
 5. Do not provide binding legal or medical advice.
 6. Use bullet points, bold keywords, and clean headings to structure your answers for maximum readability.`;
 
-      const chat = ai.chats.create({
-        model: "gemini-3.5-flash",
-        config: {
-          systemInstruction,
-          temperature: 0.7,
-        },
-        history: history || [],
+      const responseText = await callGeminiWithRetryAndFallback(async (modelName) => {
+        const chat = ai.chats.create({
+          model: modelName,
+          config: {
+            systemInstruction,
+            temperature: 0.7,
+          },
+          history: history || [],
+        });
+        const response = await chat.sendMessage({ message });
+        return response.text;
       });
 
-      const response = await chat.sendMessage({ message });
-      res.json({ text: response.text });
+      res.json({ text: responseText });
     } catch (err: any) {
       console.error("Chat API Error:", err);
       res.status(500).json({ error: err.message || "AI processing failed" });
@@ -103,28 +165,31 @@ Carefully extract:
 
 Return a clean, valid structured JSON object. Extract the details accurately.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: [imagePart, prompt],
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              documentType: { type: Type.STRING, description: "Type of the document, e.g., Aadhaar Card" },
-              documentId: { type: Type.STRING, description: "Document ID or card number" },
-              holderName: { type: Type.STRING, description: "Name of the certificate/card holder" },
-              dob: { type: Type.STRING, description: "Date of Birth or Birth Year" },
-              gender: { type: Type.STRING, description: "Gender of the holder" },
-              state: { type: Type.STRING, description: "State / Address if present" },
-              additionalInfo: { type: Type.STRING, description: "Special detail like Income amount (e.g. 1,50,000 INR), Caste Category (e.g. OBC), or other metadata" }
+      const responseText = await callGeminiWithRetryAndFallback(async (modelName) => {
+        const response = await ai.models.generateContent({
+          model: modelName,
+          contents: [imagePart, prompt],
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                documentType: { type: Type.STRING, description: "Type of the document, e.g., Aadhaar Card" },
+                documentId: { type: Type.STRING, description: "Document ID or card number" },
+                holderName: { type: Type.STRING, description: "Name of the certificate/card holder" },
+                dob: { type: Type.STRING, description: "Date of Birth or Birth Year" },
+                gender: { type: Type.STRING, description: "Gender of the holder" },
+                state: { type: Type.STRING, description: "State / Address if present" },
+                additionalInfo: { type: Type.STRING, description: "Special detail like Income amount (e.g. 1,50,000 INR), Caste Category (e.g. OBC), or other metadata" }
+              },
+              required: ["documentType", "documentId", "holderName"]
             },
-            required: ["documentType", "documentId", "holderName"]
           },
-        },
+        });
+        return response.text;
       });
 
-      res.json(JSON.parse(response.text || "{}"));
+      res.json(JSON.parse(responseText || "{}"));
     } catch (err: any) {
       console.error("OCR API Error:", err);
       res.status(500).json({ error: err.message || "Document analysis failed" });

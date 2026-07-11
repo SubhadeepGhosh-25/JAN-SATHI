@@ -2,20 +2,24 @@ import React, { useState } from "react";
 import { motion } from "motion/react";
 import { Calendar, Bell, Plus, CheckSquare, Square, Trash2, Clock, AlertTriangle } from "lucide-react";
 import { Reminder } from "../types";
+import { useTranslation } from "../lib/translations";
 
 interface RemindersListProps {
   reminders: Reminder[];
   onToggleReminder: (id: string) => void;
   onAddReminder: (reminder: Reminder) => void;
   onDeleteReminder: (id: string) => void;
+  preferredLanguage?: string;
 }
 
 export default function RemindersList({
   reminders,
   onToggleReminder,
   onAddReminder,
-  onDeleteReminder
+  onDeleteReminder,
+  preferredLanguage
 }: RemindersListProps) {
+  const { t } = useTranslation(preferredLanguage);
   const [showAdd, setShowAdd] = useState(false);
   const [title, setTitle] = useState("");
   const [schemeName, setSchemeName] = useState("PM Vidyalakshmi Scheme");
@@ -47,19 +51,19 @@ export default function RemindersList({
         <div>
           <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Calendar className="text-[#004d99] w-6 h-6" />
-            <span>Deadlines & Reminders System</span>
+            <span>{t("reminders.title")}</span>
           </h2>
           <p className="text-sm text-gray-500 mt-1">
-            Track registration deadlines, coordinate certificate renewals, and get proactive follow-up alerts.
+            {t("reminders.subtitle")}
           </p>
         </div>
 
         <button
           onClick={() => setShowAdd(!showAdd)}
-          className="h-10 px-4 bg-[#004d99] hover:bg-[#00366c] text-white rounded-full flex items-center gap-1.5 text-sm font-semibold transition-colors shadow-sm cursor-pointer"
+          className="h-10 px-4 bg-[#004d99] hover:bg-[#00366c] text-white rounded-full flex items-center gap-1.5 text-sm font-semibold transition-colors shadow-sm cursor-pointer bg-transparent"
         >
           <Plus className="w-4 h-4" />
-          <span>Add Reminder</span>
+          <span>{t("reminders.add_btn")}</span>
         </button>
       </div>
 
@@ -69,12 +73,12 @@ export default function RemindersList({
           <div className="lg:col-span-1 bg-white border border-gray-100 p-6 rounded-2xl shadow-sm h-fit space-y-4">
             <h3 className="text-sm font-bold text-gray-800 border-b border-gray-50 pb-2 flex items-center gap-2">
               <Plus className="w-4 h-4 text-[#004d99]" />
-              <span>Create Notification Event</span>
+              <span>{t("reminders.create_event")}</span>
             </h3>
 
             <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
               <div>
-                <label className="font-bold text-gray-600 block mb-1">Reminder Action Title</label>
+                <label className="font-bold text-gray-600 block mb-1">{t("reminders.action_title")}</label>
                 <input
                   type="text"
                   required
@@ -86,7 +90,7 @@ export default function RemindersList({
               </div>
 
               <div>
-                <label className="font-bold text-gray-600 block mb-1">Related Scheme Name</label>
+                <label className="font-bold text-gray-600 block mb-1">{t("reminders.scheme")}</label>
                 <input
                   type="text"
                   placeholder="e.g. PM-KISAN"
@@ -97,7 +101,7 @@ export default function RemindersList({
               </div>
 
               <div>
-                <label className="font-bold text-gray-600 block mb-1">Action Type</label>
+                <label className="font-bold text-gray-600 block mb-1">{t("reminders.type")}</label>
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value as any)}
@@ -110,7 +114,7 @@ export default function RemindersList({
               </div>
 
               <div>
-                <label className="font-bold text-gray-600 block mb-1">Target Date</label>
+                <label className="font-bold text-gray-600 block mb-1">{t("reminders.target_date")}</label>
                 <input
                   type="date"
                   required
@@ -124,15 +128,15 @@ export default function RemindersList({
                 <button
                   type="button"
                   onClick={() => setShowAdd(false)}
-                  className="flex-1 h-9 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 text-gray-700 cursor-pointer"
+                  className="flex-1 h-9 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 text-gray-700 cursor-pointer bg-transparent"
                 >
-                  Cancel
+                  {t("reminders.cancel")}
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 h-9 bg-[#004d99] hover:bg-[#00366c] text-white rounded-lg font-semibold cursor-pointer"
+                  className="flex-1 h-9 bg-[#004d99] hover:bg-[#00366c] text-white rounded-lg font-semibold cursor-pointer bg-transparent"
                 >
-                  Set Alarm
+                  {t("reminders.set_alarm")}
                 </button>
               </div>
             </form>
@@ -145,9 +149,9 @@ export default function RemindersList({
             {reminders.length === 0 ? (
               <div className="p-12 text-center text-gray-400 flex flex-col items-center justify-center min-h-[250px]">
                 <Bell className="w-12 h-12 text-gray-300 mb-3 animate-bounce" />
-                <p className="font-semibold text-gray-700">No Reminders Scheduled</p>
+                <p className="font-semibold text-gray-700">{t("reminders.no_reminders")}</p>
                 <p className="text-xs text-gray-400 mt-1 max-w-[280px]">
-                  All caught up! Apply to schemes or click "Add Reminder" to construct customized renewal alarms.
+                  {t("reminders.no_reminders_desc")}
                 </p>
               </div>
             ) : (
@@ -166,7 +170,7 @@ export default function RemindersList({
                     {/* Completion checkbox */}
                     <button
                       onClick={() => onToggleReminder(rem.id)}
-                      className="text-[#004d99] hover:text-[#00366c] transition-transform active:scale-95 cursor-pointer pt-0.5 shrink-0"
+                      className="text-[#004d99] hover:text-[#00366c] transition-transform active:scale-95 cursor-pointer pt-0.5 shrink-0 bg-transparent border-none"
                     >
                       {rem.completed ? (
                         <CheckSquare className="w-5 h-5 text-green-600" />
@@ -185,7 +189,7 @@ export default function RemindersList({
                             {rem.title}
                           </h4>
                           <span className="text-xs text-gray-500 font-semibold block mt-0.5">
-                            Scheme: <span className="text-gray-700 font-bold">{rem.schemeName}</span>
+                            {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "योजना:" : preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "योजना:" : preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "திட்டம்:" : preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "పథకం:" : "Scheme:"} <span className="text-gray-700 font-bold">{rem.schemeName}</span>
                           </span>
                         </div>
 
@@ -195,7 +199,9 @@ export default function RemindersList({
                           isDeadline ? "bg-red-50 text-red-700 border border-red-100" :
                           "bg-blue-50 text-[#004d99] border border-blue-100"
                         }`}>
-                          {rem.type}
+                          {rem.type === "Deadline" ? (preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "समय सीमा" : preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "अंतिम मुदत" : preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "காலக்கெடு" : preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "చివరి తేదీ" : rem.type) :
+                           rem.type === "Certificate Expiry" ? (preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "प्रमाणपत्र समाप्ति" : preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "प्रमाणपत्र समाप्ती" : preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "சான்றிதழ் காலாவதி" : preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "సర్టిఫికేట్ గడువు" : rem.type) :
+                           (preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "फॉलो-अप" : preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "फॉलो-अप" : preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "தொடர்பு" : preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "ఫాలో-అప్" : rem.type)}
                         </span>
                       </div>
 
@@ -203,7 +209,7 @@ export default function RemindersList({
                       <div className="flex items-center gap-3 mt-4 text-xs font-semibold">
                         <div className="flex items-center gap-1 text-gray-500 bg-gray-50 px-2.5 py-1 rounded-lg">
                           <Clock className="w-3.5 h-3.5" />
-                          <span>Due Date: {rem.dueDate}</span>
+                          <span>{preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "नियत तारीख:" : preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "अंतिम तारीख:" : preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "குறிப்பிட்ட தேதி:" : preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "గడువు తేదీ:" : "Due Date:"} {rem.dueDate}</span>
                         </div>
 
                         {!rem.completed && (
@@ -211,7 +217,7 @@ export default function RemindersList({
                             isDeadline ? "text-red-600 bg-red-50 px-2.5 py-1 rounded-lg" : "text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg"
                           }`}>
                             <AlertTriangle className="w-3.5 h-3.5" />
-                            <span>Action Required Soon</span>
+                            <span>{preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "शीघ्र कार्रवाई आवश्यक" : preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "त्वरित कृती आवश्यक" : preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "உடனடி நடவடிக்கை தேவை" : preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "త్వరలో చర్య అవసరం" : "Action Required Soon"}</span>
                           </div>
                         )}
                       </div>
@@ -220,7 +226,7 @@ export default function RemindersList({
                     {/* Trash bin action */}
                     <button
                       onClick={() => onDeleteReminder(rem.id)}
-                      className="text-gray-400 hover:text-red-500 p-1 cursor-pointer shrink-0"
+                      className="text-gray-400 hover:text-red-500 p-1 cursor-pointer shrink-0 bg-transparent border-none"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

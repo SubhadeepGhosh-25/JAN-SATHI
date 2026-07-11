@@ -523,10 +523,50 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             <motion.div 
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-start gap-2"
+              className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex flex-col gap-2"
             >
-              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-              <span className="font-semibold">{error}</span>
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-red-600" />
+                <span className="font-semibold">{error}</span>
+              </div>
+              
+              {/* Intelligent helper for email rate-limiting */}
+              {(error.toLowerCase().includes("rate limit") || 
+                error.toLowerCase().includes("exceeded") || 
+                error.toLowerCase().includes("security purposes") || 
+                error.toLowerCase().includes("too many") ||
+                error.toLowerCase().includes("60 seconds") ||
+                error.toLowerCase().includes("request this once")) && (
+                <div className="mt-1 p-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-[11px] leading-relaxed">
+                  <p className="font-bold mb-1">💡 Sandbox Guidance:</p>
+                  <p className="mb-2">
+                    To safeguard resources, external providers rate-limit authentication. You can instantly bypass this restriction and log in immediately by entering your name and clicking <strong>Instant Sandbox Bypass</strong>.
+                  </p>
+                  <div className="flex flex-col gap-1.5 mt-2">
+                    {!fullName && (
+                      <input
+                        type="text"
+                        placeholder="Type your name first..."
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="w-full h-8 px-2.5 bg-white border border-amber-300 rounded-md text-[11px] outline-none text-gray-800 focus:border-[#004d99]"
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!fullName) {
+                          setFullName("Citizen");
+                        }
+                        handleDemoLogin();
+                      }}
+                      className="w-full h-8 bg-[#004d99] hover:bg-[#003c78] text-white rounded-md font-bold transition-all text-[11px] cursor-pointer"
+                    >
+                      🚀 Bypass and Log In Now
+                    </button>
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
 

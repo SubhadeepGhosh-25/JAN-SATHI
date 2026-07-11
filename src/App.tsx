@@ -39,6 +39,8 @@ import {
   Application, Reminder, NotificationItem, SEED_SCHEMES 
 } from "./types";
 
+import { useTranslation } from "./lib/translations";
+
 // Sub Components
 import Splash from "./components/Splash";
 import Onboarding from "./components/Onboarding";
@@ -79,6 +81,8 @@ export default function App() {
     disability: false,
     preferredLanguage: "English"
   });
+
+  const { t } = useTranslation(userProfile.preferredLanguage);
 
   // Stored Data Lists
   const [documents, setDocuments] = useState<DocumentFile[]>([]);
@@ -493,9 +497,9 @@ export default function App() {
                     <Landmark className="w-5 h-5" />
                   </div>
                   <div>
-                    <h1 className="text-xl font-bold text-[#004d99] tracking-tight">JanSathi</h1>
+                    <h1 className="text-xl font-bold text-[#004d99] tracking-tight">{t("app.name")}</h1>
                     <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-widest -mt-1">
-                      Gov Scheme Assistant
+                      {t("app.tagline")}
                     </p>
                   </div>
                 </div>
@@ -508,7 +512,7 @@ export default function App() {
                       activeTab === "home" ? "bg-[#004d99]/5 text-[#004d99]" : "text-gray-500 hover:text-gray-900"
                     }`}
                   >
-                    Home
+                    {t("nav.home")}
                   </button>
                   <button 
                     onClick={() => handleTabNavigation("schemes")}
@@ -516,7 +520,7 @@ export default function App() {
                       activeTab === "schemes" ? "bg-[#004d99]/5 text-[#004d99]" : "text-gray-500 hover:text-gray-900"
                     }`}
                   >
-                    Schemes
+                    {t("nav.schemes")}
                   </button>
                   <button 
                     onClick={() => handleTabNavigation("eligibility")}
@@ -524,7 +528,7 @@ export default function App() {
                       activeTab === "eligibility" ? "bg-[#004d99]/5 text-[#004d99]" : "text-gray-500 hover:text-gray-900"
                     }`}
                   >
-                    Check Eligibility
+                    {t("nav.eligibility")}
                   </button>
                   <button 
                     onClick={() => handleTabNavigation("documents")}
@@ -532,7 +536,7 @@ export default function App() {
                       activeTab === "documents" ? "bg-[#004d99]/5 text-[#004d99]" : "text-gray-500 hover:text-gray-900"
                     }`}
                   >
-                    Document Vault
+                    {t("nav.vault")}
                   </button>
                   <button 
                     onClick={() => handleTabNavigation("chat")}
@@ -540,7 +544,7 @@ export default function App() {
                       activeTab === "chat" ? "bg-[#004d99]/5 text-[#004d99]" : "text-gray-500 hover:text-gray-900"
                     }`}
                   >
-                    Chat Assistant
+                    {t("nav.chat")}
                   </button>
                   <button 
                     onClick={() => handleTabNavigation("family")}
@@ -548,7 +552,7 @@ export default function App() {
                       activeTab === "family" ? "bg-[#004d99]/5 text-[#004d99]" : "text-gray-500 hover:text-gray-900"
                     }`}
                   >
-                    Family Profiles
+                    {t("nav.family")}
                   </button>
                 </nav>
 
@@ -626,6 +630,7 @@ export default function App() {
                         savedSchemeIds={savedSchemeIds}
                         onToggleSaveScheme={handleToggleSaveScheme}
                         onApplyForScheme={handleApplyForScheme}
+                        preferredLanguage={userProfile.preferredLanguage}
                       />
                     )}
 
@@ -643,6 +648,7 @@ export default function App() {
                         documents={documents}
                         onUploadDocument={handleUploadDocument}
                         onDeleteDocument={handleDeleteDocument}
+                        preferredLanguage={userProfile.preferredLanguage}
                       />
                     )}
 
@@ -650,6 +656,7 @@ export default function App() {
                       <ChatAssistant
                         initialPrompt={chatInitialPrompt}
                         onClearPrompt={() => setChatInitialPrompt("")}
+                        preferredLanguage={userProfile.preferredLanguage}
                       />
                     )}
 
@@ -660,6 +667,7 @@ export default function App() {
                         onDeleteFamilyMember={handleDeleteFamilyMember}
                         allSchemes={schemes}
                         onViewSchemeDetails={handleViewSchemeDetails}
+                        preferredLanguage={userProfile.preferredLanguage}
                       />
                     )}
 
@@ -669,6 +677,7 @@ export default function App() {
                         onToggleReminder={handleToggleReminder}
                         onAddReminder={handleAddReminder}
                         onDeleteReminder={handleDeleteReminder}
+                        preferredLanguage={userProfile.preferredLanguage}
                       />
                     )}
 
@@ -693,7 +702,7 @@ export default function App() {
                 }`}
               >
                 <HomeIcon className="w-5 h-5" />
-                <span className="text-[9px] font-bold mt-1">Home</span>
+                <span className="text-[9px] font-bold mt-1">{t("nav.home")}</span>
               </button>
 
               <button 
@@ -703,7 +712,7 @@ export default function App() {
                 }`}
               >
                 <Award className="w-5 h-5" />
-                <span className="text-[9px] font-bold mt-1">Schemes</span>
+                <span className="text-[9px] font-bold mt-1">{t("nav.schemes")}</span>
               </button>
 
               <button 
@@ -713,7 +722,7 @@ export default function App() {
                 }`}
               >
                 <ClipboardCheck className="w-5 h-5" />
-                <span className="text-[9px] font-bold mt-1">Eligibility</span>
+                <span className="text-[9px] font-bold mt-1">{t("nav.eligibility")}</span>
               </button>
 
               <button 
@@ -723,7 +732,7 @@ export default function App() {
                 }`}
               >
                 <ShieldCheck className="w-5 h-5" />
-                <span className="text-[9px] font-bold mt-1">Vault</span>
+                <span className="text-[9px] font-bold mt-1">{t("nav.vault")}</span>
               </button>
 
               <button 
@@ -733,7 +742,7 @@ export default function App() {
                 }`}
               >
                 <Sparkles className="w-5 h-5" />
-                <span className="text-[9px] font-bold mt-1">AI Chat</span>
+                <span className="text-[9px] font-bold mt-1">{t("nav.chat")}</span>
               </button>
 
               <button 
@@ -743,7 +752,7 @@ export default function App() {
                 }`}
               >
                 <Users className="w-5 h-5" />
-                <span className="text-[9px] font-bold mt-1">Family</span>
+                <span className="text-[9px] font-bold mt-1">{t("nav.family")}</span>
               </button>
             </div>
           </motion.div>

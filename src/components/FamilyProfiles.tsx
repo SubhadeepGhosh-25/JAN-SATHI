@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion } from "motion/react";
 import { Users, Plus, Trash2, Heart, Award, Sparkles, CheckCircle } from "lucide-react";
 import { FamilyMember, Scheme } from "../types";
+import { useTranslation } from "../lib/translations";
 
 interface FamilyProfilesProps {
   familyMembers: FamilyMember[];
@@ -9,6 +10,7 @@ interface FamilyProfilesProps {
   onDeleteFamilyMember: (memberId: string) => void;
   allSchemes: Scheme[];
   onViewSchemeDetails: (scheme: Scheme) => void;
+  preferredLanguage?: string;
 }
 
 export default function FamilyProfiles({
@@ -16,8 +18,10 @@ export default function FamilyProfiles({
   onAddFamilyMember,
   onDeleteFamilyMember,
   allSchemes,
-  onViewSchemeDetails
+  onViewSchemeDetails,
+  preferredLanguage
 }: FamilyProfilesProps) {
+  const { t } = useTranslation(preferredLanguage);
   const [showAddForm, setShowAddForm] = useState(false);
   const [name, setName] = useState("");
   const [relationship, setRelationship] = useState("Parent");
@@ -76,19 +80,19 @@ export default function FamilyProfiles({
         <div>
           <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Users className="text-[#004d99] w-6 h-6" />
-            <span>Family Profiles & Sub-Eligibility</span>
+            <span>{t("family.title")}</span>
           </h2>
           <p className="text-sm text-gray-500 mt-1">
-            Manage files and accounts for parents, children, or grandparents to check dynamic scheme matching for them.
+            {t("family.subtitle")}
           </p>
         </div>
 
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="h-10 px-4 bg-[#004d99] hover:bg-[#00366c] text-white rounded-full flex items-center gap-1.5 text-sm font-semibold transition-colors shadow-sm cursor-pointer"
+          className="h-10 px-4 bg-[#004d99] hover:bg-[#00366c] text-white rounded-full flex items-center gap-1.5 text-sm font-semibold transition-colors shadow-sm cursor-pointer bg-transparent"
         >
           <Plus className="w-4 h-4" />
-          <span>Add Family Profile</span>
+          <span>{t("family.add_btn")}</span>
         </button>
       </div>
 
@@ -98,13 +102,13 @@ export default function FamilyProfiles({
           <div className="lg:col-span-1 bg-white border border-gray-100 p-6 rounded-2xl shadow-sm h-fit space-y-4">
             <h3 className="text-sm font-bold text-gray-800 border-b border-gray-50 pb-2 flex items-center gap-2">
               <Plus className="w-4 h-4 text-[#004d99]" />
-              <span>Configure Profile</span>
+              <span>{t("family.configure")}</span>
             </h3>
 
             <form onSubmit={handleAddSubmit} className="space-y-3 text-xs">
               {/* Name */}
               <div>
-                <label className="font-bold text-gray-600 block mb-1">Full Name</label>
+                <label className="font-bold text-gray-600 block mb-1">{t("family.name")}</label>
                 <input
                   type="text"
                   required
@@ -117,7 +121,7 @@ export default function FamilyProfiles({
 
               {/* Relationship */}
               <div>
-                <label className="font-bold text-gray-600 block mb-1">Relationship</label>
+                <label className="font-bold text-gray-600 block mb-1">{t("family.relationship")}</label>
                 <select
                   value={relationship}
                   onChange={(e) => setRelationship(e.target.value)}
@@ -129,7 +133,7 @@ export default function FamilyProfiles({
 
               {/* Age */}
               <div>
-                <label className="font-bold text-gray-600 block mb-1">Age</label>
+                <label className="font-bold text-gray-600 block mb-1">{t("family.age")}</label>
                 <input
                   type="number"
                   required
@@ -141,7 +145,7 @@ export default function FamilyProfiles({
 
               {/* Gender */}
               <div>
-                <label className="font-bold text-gray-600 block mb-1">Gender</label>
+                <label className="font-bold text-gray-600 block mb-1">{t("family.gender")}</label>
                 <select
                   value={gender}
                   onChange={(e) => setGender(e.target.value)}
@@ -155,7 +159,7 @@ export default function FamilyProfiles({
 
               {/* Occupation */}
               <div>
-                <label className="font-bold text-gray-600 block mb-1">Occupation</label>
+                <label className="font-bold text-gray-600 block mb-1">{t("family.occupation")}</label>
                 <select
                   value={occupation}
                   onChange={(e) => setOccupation(e.target.value)}
@@ -167,7 +171,7 @@ export default function FamilyProfiles({
 
               {/* Income */}
               <div>
-                <label className="font-bold text-gray-600 block mb-1">Annual Income (INR)</label>
+                <label className="font-bold text-gray-600 block mb-1">{t("family.income")}</label>
                 <input
                   type="number"
                   required
@@ -179,7 +183,7 @@ export default function FamilyProfiles({
 
               {/* Disability */}
               <div className="flex items-center justify-between py-2">
-                <span className="font-bold text-gray-600">Disability (PwD)</span>
+                <span className="font-bold text-gray-600">{t("family.disability")}</span>
                 <input
                   type="checkbox"
                   checked={disability}
@@ -192,15 +196,15 @@ export default function FamilyProfiles({
                 <button
                   type="button"
                   onClick={() => setShowAddForm(false)}
-                  className="flex-1 h-9 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 text-gray-700 cursor-pointer"
+                  className="flex-1 h-9 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 text-gray-700 cursor-pointer bg-transparent"
                 >
-                  Cancel
+                  {t("family.cancel")}
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 h-9 bg-[#004d99] hover:bg-[#00366c] text-white rounded-lg font-semibold cursor-pointer"
+                  className="flex-1 h-9 bg-[#004d99] hover:bg-[#00366c] text-white rounded-lg font-semibold cursor-pointer bg-transparent"
                 >
-                  Save Profile
+                  {t("family.save")}
                 </button>
               </div>
             </form>
@@ -212,9 +216,9 @@ export default function FamilyProfiles({
           {familyMembers.length === 0 ? (
             <div className="md:col-span-2 bg-white border border-gray-100 p-12 rounded-2xl text-center text-gray-400 flex flex-col items-center justify-center min-h-[300px]">
               <Users className="w-12 h-12 text-gray-300 mb-3 animate-pulse" />
-              <p className="font-bold text-gray-700">No Family Profiles Created</p>
+              <p className="font-bold text-gray-700">{t("family.no_profiles")}</p>
               <p className="text-xs text-gray-400 max-w-[280px] mt-1">
-                Add profile details for your dependents (parents, children) to dynamically calculate what benefits they are eligible for.
+                {t("family.no_profiles_desc")}
               </p>
             </div>
           ) : (
@@ -233,7 +237,7 @@ export default function FamilyProfiles({
                       </span>
                       <button
                         onClick={() => onDeleteFamilyMember(member.id)}
-                        className="text-gray-400 hover:text-red-500 p-1 cursor-pointer"
+                        className="text-gray-400 hover:text-red-500 p-1 cursor-pointer bg-transparent border-none"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -241,13 +245,13 @@ export default function FamilyProfiles({
 
                     <h3 className="text-lg font-bold text-gray-900 leading-tight">{member.name}</h3>
                     <p className="text-xs text-gray-400 mt-1">
-                      Age: <span className="text-gray-700 font-semibold">{member.age}</span> • Gender: <span className="text-gray-700 font-semibold">{member.gender}</span> • Income: <span className="text-gray-700 font-semibold">₹ {member.income.toLocaleString()}</span>
+                      {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "आयु:" : preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "वय:" : preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "வயது:" : preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "వయస్సు:" : "Age:"} <span className="text-gray-700 font-semibold">{member.age}</span> • {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "लिंग:" : preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "लिंग:" : preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "பாலினம்:" : preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "లింగం:" : "Gender:"} <span className="text-gray-700 font-semibold">{member.gender}</span> • {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "आय:" : preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "उत्पन्न:" : preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "வருமானம்:" : preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "ఆదాయం:" : "Income:"} <span className="text-gray-700 font-semibold">₹ {member.income.toLocaleString()}</span>
                     </p>
 
                     <div className="mt-4 pt-4 border-t border-gray-50">
                       <h4 className="text-xs font-bold text-gray-800 flex items-center gap-1 mb-2">
                         <Award className="w-4 h-4 text-amber-500" />
-                        <span>Eligible Schemes ({eligibleSchemes.length})</span>
+                        <span>{t("family.eligible_schemes")} ({eligibleSchemes.length})</span>
                       </h4>
 
                       {eligibleSchemes.length === 0 ? (
@@ -262,7 +266,7 @@ export default function FamilyProfiles({
                             >
                               <span className="font-bold text-gray-700 truncate max-w-[150px]">{sch.schemeName}</span>
                               <span className="text-[#004d99] font-semibold text-[10px] flex items-center gap-0.5 shrink-0">
-                                <span>Check details</span>
+                                <span>{t("family.details")}</span>
                                 <Plus className="w-3 h-3" />
                               </span>
                             </div>
@@ -281,7 +285,7 @@ export default function FamilyProfiles({
                     <span>Category: {member.category}</span>
                     <span className="text-green-600 flex items-center gap-0.5">
                       <CheckCircle className="w-3.5 h-3.5" />
-                      <span>Sync Active</span>
+                      <span>{t("family.sync")}</span>
                     </span>
                   </div>
                 </div>

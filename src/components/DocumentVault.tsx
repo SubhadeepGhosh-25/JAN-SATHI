@@ -5,11 +5,13 @@ import {
   Trash2, RefreshCw, Eye, EyeOff, Sparkles, HelpCircle 
 } from "lucide-react";
 import { DocumentFile } from "../types";
+import { useTranslation } from "../lib/translations";
 
 interface DocumentVaultProps {
   documents: DocumentFile[];
   onUploadDocument: (doc: DocumentFile) => void;
   onDeleteDocument: (docId: string) => void;
+  preferredLanguage?: string;
 }
 
 // Pre-packaged base64 sample images (mini 1x1 green/blue transparent png data or simple vector lines to make the SDK call valid)
@@ -19,8 +21,10 @@ const SAMPLE_AADHAAR_B64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlE
 export default function DocumentVault({
   documents,
   onUploadDocument,
-  onDeleteDocument
+  onDeleteDocument,
+  preferredLanguage
 }: DocumentVaultProps) {
+  const { t } = useTranslation(preferredLanguage);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedDocType, setSelectedDocType] = useState("Aadhaar Card");
   const [dragActive, setDragActive] = useState(false);
@@ -142,15 +146,15 @@ export default function DocumentVault({
         <div>
           <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <ShieldCheck className="text-[#004d99] w-6 h-6" />
-            <span>Secure Citizen Document Vault</span>
+            <span>{t("vault.title")}</span>
           </h2>
           <p className="text-sm text-gray-500 mt-1">
-            Keep your certificates secure. Upload files to verify and instantly parse metadata using our server-side Gemini OCR engine.
+            {t("vault.subtitle")}
           </p>
         </div>
         <div className="flex gap-2 text-xs bg-[#006b5f]/5 text-[#006b5f] border border-[#006b5f]/10 p-2.5 rounded-xl font-semibold">
           <ShieldCheck className="w-4 h-4 shrink-0 text-[#006b5f]" />
-          <span>AES-256 Encrypted Storage</span>
+          <span>{preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "AES-256 सुरक्षित एन्क्रिप्टेड स्टोरेज" : preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "AES-256 कूटबद्ध संग्रह" : preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "AES-256 பாதுகாப்பான குறியாக்கப்பட்ட சேமிப்பு" : preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "AES-256 సురక్షిత ఎన్‌క్రిప్టెడ్ నిల్వ" : "AES-256 Encrypted Storage"}</span>
         </div>
       </div>
 
@@ -158,7 +162,7 @@ export default function DocumentVault({
         {/* Upload panel */}
         <div className="lg:col-span-1 space-y-4">
           <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4">
-            <h3 className="text-sm font-bold text-gray-800">1. Select Document Category</h3>
+            <h3 className="text-sm font-bold text-gray-800">1. {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "दस्तावेज़ श्रेणी चुनें" : preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "दस्तऐवज प्रवर्ग निवडा" : preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "ஆவணப் பிரிவைத் தேர்ந்தெடுக்கவும்" : preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "పత్రం వర్గాన్ని ఎంచుకోండి" : "Select Document Category"}</h3>
             <select
               value={selectedDocType}
               onChange={(e) => setSelectedDocType(e.target.value)}
@@ -167,7 +171,7 @@ export default function DocumentVault({
               {docTypes.map(type => <option key={type} value={type}>{type}</option>)}
             </select>
 
-            <h3 className="text-sm font-bold text-gray-800 pt-2">2. Upload Card Photo or PDF</h3>
+            <h3 className="text-sm font-bold text-gray-800 pt-2">2. {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "दस्तावेज़ फोटो या पीडीएफ अपलोड करें" : preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "फोटो किंवा पीडीएफ दस्तऐवज अपलोड करा" : preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "புகைப்படம் அல்லது PDF பதிவேற்றவும்" : preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "పత్రం ఫోటో లేదా PDF అప్‌లోడ్ చేయండి" : "Upload Card Photo or PDF"}</h3>
             
             <div 
               onDragEnter={handleDrag}
@@ -181,14 +185,14 @@ export default function DocumentVault({
               {isUploading ? (
                 <div className="space-y-4">
                   <RefreshCw className="w-10 h-10 text-[#004d99] animate-spin mx-auto" />
-                  <p className="text-xs font-bold text-gray-700">Gemini OCR Scanning Document...</p>
+                  <p className="text-xs font-bold text-gray-700">{preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "जेमिनी ओसीआर दस्तावेज़ को स्कैन कर रहा है..." : preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "स्कॅनिंग सुरु आहे..." : preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "ஆவணம் ஸ்கேன் செய்யப்படுகிறது..." : preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "పత్రం స్కాన్ చేయబడుతోంది..." : "Gemini OCR Scanning Document..."}</p>
                   <p className="text-[10px] text-gray-400">Extracting name, DOB, and ID credentials securely</p>
                 </div>
               ) : (
                 <>
                   <UploadCloud className="w-10 h-10 text-gray-400 mb-2" />
-                  <p className="text-xs font-bold text-gray-700">Drag & Drop file here</p>
-                  <p className="text-[10px] text-gray-400 mt-1">or click browse files (JPEG, PNG, PDF)</p>
+                  <p className="text-xs font-bold text-gray-700">{t("vault.upload_area_title")}</p>
+                  <p className="text-[10px] text-gray-400 mt-1">{t("vault.upload_area_desc")}</p>
                   <input
                     type="file"
                     accept="image/*,application/pdf"
@@ -202,13 +206,13 @@ export default function DocumentVault({
             {/* Quick Demo Scanning Buttons */}
             <div className="pt-4 border-t border-gray-50 space-y-2">
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">
-                Quick Demo: Scan Sample Documents
+                {t("vault.demo_button")}
               </span>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => triggerSampleScan("Aadhaar Card")}
-                  className="h-10 text-xs font-semibold rounded-xl bg-[#004d99]/5 hover:bg-[#004d99]/10 text-[#004d99] border border-[#004d99]/10 flex items-center justify-center gap-1 cursor-pointer"
+                  className="h-10 text-xs font-semibold rounded-xl bg-[#004d99]/5 hover:bg-[#004d99]/10 text-[#004d99] border border-[#004d99]/10 flex items-center justify-center gap-1 cursor-pointer bg-transparent"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-current" />
                   <span>Scan Aadhaar</span>
@@ -216,7 +220,7 @@ export default function DocumentVault({
                 <button
                   type="button"
                   onClick={() => triggerSampleScan("PAN Card")}
-                  className="h-10 text-xs font-semibold rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-100 flex items-center justify-center gap-1 cursor-pointer"
+                  className="h-10 text-xs font-semibold rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-100 flex items-center justify-center gap-1 cursor-pointer bg-transparent"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-current" />
                   <span>Scan PAN</span>
@@ -234,12 +238,12 @@ export default function DocumentVault({
 
         {/* Vault list details */}
         <div className="lg:col-span-2 space-y-4">
-          <h3 className="text-lg font-bold text-gray-900">Stored Credentials ({documents.length})</h3>
+          <h3 className="text-lg font-bold text-gray-900">{t("vault.uploaded_docs")} ({documents.length})</h3>
 
           {documents.length === 0 ? (
             <div className="bg-white border border-gray-100 rounded-2xl p-12 text-center text-gray-400 flex flex-col items-center justify-center min-h-[300px]">
               <FileText className="w-12 h-12 text-gray-300 mb-3 animate-pulse" />
-              <p className="font-semibold text-gray-700">Your Vault is Empty</p>
+              <p className="font-semibold text-gray-700">{preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "आपका सुरक्षित वॉल्ट खाली है" : preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "तुमचा दस्तऐवज संग्रह रिकामी आहे" : preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "உங்கள் ஆவணக் களஞ்சியம் காலியாக உள்ளது" : preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "మీ పత్రాల వాల్ట్ ఖాళీగా ఉంది" : "Your Vault is Empty"}</p>
               <p className="text-xs text-gray-400 max-w-[280px] mt-1">
                 Upload your ID cards or click "Scan Aadhaar" to trigger real OCR parsing.
               </p>
@@ -255,11 +259,12 @@ export default function DocumentVault({
                     <div className="flex justify-between items-start mb-3">
                       <span className="px-2.5 py-1 bg-green-50 text-green-700 text-xs font-bold rounded-lg flex items-center gap-1">
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Verified</span>
+                        <span>{t("vault.verified")}</span>
                       </span>
                       <button 
                         onClick={() => onDeleteDocument(doc.id)}
-                        className="text-gray-400 hover:text-red-500 p-1"
+                        className="text-gray-400 hover:text-red-500 p-1 bg-transparent border-none cursor-pointer"
+                        title={t("vault.delete")}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -269,28 +274,28 @@ export default function DocumentVault({
                     
                     <div className="space-y-1 mt-3 text-xs text-gray-500 border-t border-gray-50 pt-3">
                       <div className="flex justify-between">
-                        <span>ID Number</span>
+                        <span>{t("vault.id_num")}</span>
                         <span className="font-mono text-gray-900 font-semibold">{doc.documentId}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Holder Name</span>
+                        <span>{t("vault.holder")}</span>
                         <span className="text-gray-900 font-semibold">{doc.holderName}</span>
                       </div>
                       {doc.dob && (
                         <div className="flex justify-between">
-                          <span>DOB</span>
+                          <span>{t("vault.dob")}</span>
                           <span className="text-gray-900 font-semibold">{doc.dob}</span>
                         </div>
                       )}
                       {doc.gender && (
                         <div className="flex justify-between">
-                          <span>Gender</span>
+                          <span>{t("vault.gender_label")}</span>
                           <span className="text-gray-900 font-semibold">{doc.gender}</span>
                         </div>
                       )}
                       {doc.state && (
                         <div className="flex justify-between">
-                          <span>State</span>
+                          <span>{t("vault.state_label")}</span>
                           <span className="text-gray-900 font-semibold">{doc.state}</span>
                         </div>
                       )}
@@ -301,7 +306,7 @@ export default function DocumentVault({
                     <span>Uploaded: {doc.uploadedAt}</span>
                     <span className="text-[#006b5f] flex items-center gap-1">
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>OCR Secure</span>
+                      <span>{t("vault.verified")}</span>
                     </span>
                   </div>
                 </div>

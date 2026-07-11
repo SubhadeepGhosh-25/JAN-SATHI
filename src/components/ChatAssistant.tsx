@@ -4,20 +4,32 @@ import { Sparkles, Send, RefreshCw, HelpCircle, ShieldAlert, Bot, User } from "l
 import { ChatMessage } from "../types";
 import { auth } from "../lib/firebase";
 import { getChatHistory, saveChatMessage } from "../lib/firebaseService";
+import { useTranslation } from "../lib/translations";
 
 interface ChatAssistantProps {
   initialPrompt?: string;
   onClearPrompt?: () => void;
+  preferredLanguage?: string;
 }
 
-export default function ChatAssistant({ initialPrompt, onClearPrompt }: ChatAssistantProps) {
+export default function ChatAssistant({ initialPrompt, onClearPrompt, preferredLanguage }: ChatAssistantProps) {
+  const { t } = useTranslation(preferredLanguage);
+
+  const getWelcomeMessageText = () => {
+    return t("chat.welcome") + "\n\n" + (preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "*नोट: कृपया आवेदन करने से पहले आधिकारिक सरकारी पोर्टलों पर सभी विवरण सत्यापित करें।*" :
+            preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "*टीप: कृपया अर्ज करण्यापूर्वी अधिकृत सरकारी पोर्टलवरील सर्व तपशील तपासा.*" :
+            preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "*குறிப்பு: விண்ணப்பிக்கும் முன் அதிகாரப்பூர்வ அரசு இணையதளங்களில் அனைத்து விவரங்களையும் சரிபார்க்கவும்.*" :
+            preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "*గమనిక: దయచేసి దరఖాస్తు చేయడానికి ముందు అధికారిక ప్రభుత్వ పోర్టల్‌లలో అన్ని వివరాలను ధృవీకరించండి.*" :
+            "*Note: Please verify all details on official government portals before applying.*");
+  };
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
       role: "model",
       parts: [
         {
-          text: "Namaste! I am your JanSathi AI Assistant. I can help you discover Indian government schemes, understand complex eligibility rules, checklists of required documents, and guide you through form application steps in simple English or regional languages. How can I assist you today?\n\n*Note: Please verify all details on official government portals before applying.*"
+          text: getWelcomeMessageText()
         }
       ]
     }
@@ -27,10 +39,10 @@ export default function ChatAssistant({ initialPrompt, onClearPrompt }: ChatAssi
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const presetPrompts = [
-    "What is the PM Vidyalakshmi Scheme?",
-    "What documents do I need for PM-KISAN?",
-    "How do I apply for Ayushman Bharat health insurance?",
-    "Tell me about housing subsidies under PMAY."
+    t("chat.starter_1"),
+    t("chat.starter_2"),
+    t("chat.starter_3"),
+    t("chat.starter_4")
   ];
 
   // Load previous chat history from Firebase
@@ -46,7 +58,7 @@ export default function ChatAssistant({ initialPrompt, onClearPrompt }: ChatAssi
                 role: "model",
                 parts: [
                   {
-                    text: "Namaste! I am your JanSathi AI Assistant. I can help you discover Indian government schemes, understand complex eligibility rules, checklists of required documents, and guide you through form application steps in simple English or regional languages. How can I assist you today?\n\n*Note: Please verify all details on official government portals before applying.*"
+                    text: getWelcomeMessageText()
                   }
                 ]
               },
@@ -59,7 +71,7 @@ export default function ChatAssistant({ initialPrompt, onClearPrompt }: ChatAssi
       }
     }
     loadHistory();
-  }, []);
+  }, [preferredLanguage]);
 
   // Load initial prompt if navigated from other screen (like Apply with AI Assistant)
   useEffect(() => {
@@ -157,21 +169,21 @@ export default function ChatAssistant({ initialPrompt, onClearPrompt }: ChatAssi
           </div>
           <div>
             <h3 className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
-              <span>JanSathi AI Scheme Expert</span>
+              <span>{t("chat.title")}</span>
               <span className="text-[10px] font-bold text-[#006b5f] bg-[#8df5e4]/30 px-1.5 py-0.5 rounded">
                 Gemini Active
               </span>
             </h3>
-            <p className="text-[10px] text-gray-400">Supporting English, Hindi, and regional languages</p>
+            <p className="text-[10px] text-gray-400">{t("chat.subtitle")}</p>
           </div>
         </div>
 
         <button
           onClick={() => setMessages([messages[0]])}
-          className="p-1.5 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors text-xs flex items-center gap-1 cursor-pointer"
+          className="p-1.5 border border-gray-200 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors text-xs flex items-center gap-1 cursor-pointer bg-transparent"
         >
           <RefreshCw className="w-3.5 h-3.5" />
-          <span>Reset Chat</span>
+          <span>{preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "चैट रीसेट करें" : preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "चॅट रीसेट करा" : preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "அரட்டையை மீட்டமை" : preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "చాట్ రీసెట్ చేయండి" : "Reset Chat"}</span>
         </button>
       </div>
 
@@ -179,7 +191,7 @@ export default function ChatAssistant({ initialPrompt, onClearPrompt }: ChatAssi
       <div className="bg-amber-50 text-amber-800 px-6 py-3 border-b border-amber-100 flex items-start gap-2.5 text-xs select-none shrink-0">
         <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
         <p className="leading-normal font-medium">
-          <strong>Official Verification Disclaimer:</strong> AI responses are informational. Always verify eligibility, deadlines, and requirements on official portals (<span className="underline">.gov.in</span>) before submitting documents.
+          <strong>{preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "आधिकारिक सत्यापन अस्वीकरण:" : preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "अधिकृत पडताळणी अस्वीकरण:" : preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "அதிகாரப்பூர்வ சரிபார்ப்பு மறுப்பு:" : preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "అధికారిక ధృవీకరణ నిరాకరణ:" : "Official Verification Disclaimer:"}</strong> {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "एआई प्रतिक्रियाएं सूचनात्मक हैं। दस्तावेज़ जमा करने से पहले हमेशा आधिकारिक पोर्टल (.gov.in) पर पात्रता, समय सीमा और आवश्यकताओं को सत्यापित करें।" : preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "एआय प्रतिसाद केवळ माहितीसाठी आहेत. कागदपत्रे सादर करण्यापूर्वी नेहमी अधिकृत पोर्टलवर पात्रता, अंतिम मुदत आणि आवश्यकता पडताळून पहा." : preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "AI பதில்கள் தகவல் நோக்கங்களுக்கானவை. ஆவணங்களை சமர்ப்பிக்கும் முன் எப்போதும் அதிகாரப்பூர்வ இணையதளங்களில் தகுதி, காலக்கெடு மற்றும் தேவைகளை சரிபார்க்கவும்." : preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "AI సమాధానాలు సమాచారం కొరకే. పత్రాలను సమర్పించే ముందు ఎల్లప్పుడూ అధికారిక పోర్టల్స్‌లో అర్హత, గడువు మరియు అవసరాలను ధృవీకరించుకోండి." : "AI responses are informational. Always verify eligibility, deadlines, and requirements on official portals (.gov.in) before submitting documents."}
         </p>
       </div>
 
@@ -236,7 +248,7 @@ export default function ChatAssistant({ initialPrompt, onClearPrompt }: ChatAssi
         <div className="p-4 bg-white border-t border-gray-50 shrink-0">
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2 flex items-center gap-1">
             <HelpCircle className="w-3.5 h-3.5" />
-            <span>Frequently Asked Questions</span>
+            <span>{preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "अक्सर पूछे जाने वाले प्रश्न" : preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "नेहमी विचारले जाणारे प्रश्न" : preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "அடிக்கடி கேட்கப்படும் கேள்விகள்" : preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "తరచుగా అడిగే ప్రశ్నలు" : "Frequently Asked Questions"}</span>
           </span>
           <div className="flex flex-wrap gap-2">
             {presetPrompts.map((p, idx) => (
@@ -257,7 +269,7 @@ export default function ChatAssistant({ initialPrompt, onClearPrompt }: ChatAssi
       <div className="p-4 bg-white border-t border-gray-100 flex gap-2 shrink-0">
         <input
           type="text"
-          placeholder="Ask anything about schemes, eligibility, or application steps..."
+          placeholder={t("chat.placeholder")}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSendMessage(input)}

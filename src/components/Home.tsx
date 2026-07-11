@@ -5,6 +5,7 @@ import {
   Megaphone, CheckSquare, Bookmark, AlertCircle, Sparkles
 } from "lucide-react";
 import { Scheme, UserProfile, NotificationItem, Application } from "../types";
+import { useTranslation } from "../lib/translations";
 
 interface HomeProps {
   userProfile: UserProfile;
@@ -29,8 +30,21 @@ export default function Home({
   onViewSchemeDetails,
   onToggleSaveScheme
 }: HomeProps) {
+  const { t } = useTranslation(userProfile.preferredLanguage);
   const isProfileIncomplete = !userProfile.age || !userProfile.state || !userProfile.category;
-  const profileStrength = isProfileIncomplete ? "Needs Attention (20%)" : "Good (100%)";
+  
+  // Localized profile strength string
+  const strengthText = isProfileIncomplete 
+    ? (userProfile.preferredLanguage === "Hindi" || userProfile.preferredLanguage === "हिन्दी (Hindi)" ? "ध्यान देने की आवश्यकता (20%)" : 
+       userProfile.preferredLanguage === "Marathi" || userProfile.preferredLanguage === "मराठी (Marathi)" ? "लक्ष देण्याची गरज (२०%)" : 
+       userProfile.preferredLanguage === "Tamil" || userProfile.preferredLanguage === "தமிழ் (Tamil)" ? "கவனம் தேவை (20%)" : 
+       userProfile.preferredLanguage === "Telugu" || userProfile.preferredLanguage === "తెలుగు (Telugu)" ? "శ్రద్ధ అవసరం (20%)" : "Needs Attention (20%)")
+    : (userProfile.preferredLanguage === "Hindi" || userProfile.preferredLanguage === "हिन्दी (Hindi)" ? "उत्कृष्ट (100%)" : 
+       userProfile.preferredLanguage === "Marathi" || userProfile.preferredLanguage === "मराठी (Marathi)" ? "उत्कृष्ट (१००%)" : 
+       userProfile.preferredLanguage === "Tamil" || userProfile.preferredLanguage === "தமிழ் (Tamil)" ? "மிக நன்று (100%)" : 
+       userProfile.preferredLanguage === "Telugu" || userProfile.preferredLanguage === "తెలుగు (Telugu)" ? "అద్భుతం (100%)" : "Good (100%)");
+
+  const profileStrength = strengthText;
 
   return (
     <div className="space-y-8 py-4">
@@ -38,9 +52,9 @@ export default function Home({
       <section className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-gray-900">
-            Hello, {userProfile.name ? userProfile.name.split(" ")[0] : "Citizen"}
+            {t("home.hello")}, {userProfile.name ? userProfile.name.split(" ")[0] : (userProfile.preferredLanguage === "Hindi" || userProfile.preferredLanguage === "हिन्दी (Hindi)" ? "नागरिक" : userProfile.preferredLanguage === "Marathi" || userProfile.preferredLanguage === "मराठी (Marathi)" ? "नागरिक" : userProfile.preferredLanguage === "Tamil" || userProfile.preferredLanguage === "தமிழ் (Tamil)" ? "குடிமகன்" : userProfile.preferredLanguage === "Telugu" || userProfile.preferredLanguage === "తెలుగు (Telugu)" ? "పౌరుడు" : "Citizen")}
           </h2>
-          <p className="text-gray-500 mt-1">Here is your daily update.</p>
+          <p className="text-gray-500 mt-1">{t("home.daily_update")}</p>
         </div>
         <div className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold ${
           isProfileIncomplete 
@@ -48,7 +62,7 @@ export default function Home({
             : "bg-[#004d99]/5 text-[#004d99]"
         }`}>
           <Sparkles className={`w-4 h-4 ${isProfileIncomplete ? "text-amber-600" : "text-[#004d99]"}`} />
-          <span>Profile Strength: {profileStrength}</span>
+          <span>{t("home.profile_strength")}: {profileStrength}</span>
         </div>
       </section>
 
@@ -62,9 +76,9 @@ export default function Home({
           <div className="flex gap-3">
             <AlertCircle className="w-5 h-5 mt-0.5 shrink-0 text-amber-600 animate-pulse" />
             <div>
-              <h4 className="font-bold text-sm text-amber-900">Citizen Parameters Not Setup</h4>
+              <h4 className="font-bold text-sm text-amber-900">{t("home.incomplete_banner_title")}</h4>
               <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
-                You have not yet specified your age, state, or social category. Please provide this data so JanSathi can accurately find matching government benefits for you.
+                {t("home.incomplete_banner_desc")}
               </p>
             </div>
           </div>
@@ -72,7 +86,7 @@ export default function Home({
             onClick={() => onNavigate("eligibility")}
             className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors cursor-pointer whitespace-nowrap shrink-0 self-end sm:self-center"
           >
-            Setup Profile Now
+            {t("home.setup_profile_now")}
           </button>
         </motion.div>
       )}
@@ -88,14 +102,14 @@ export default function Home({
             <div className="flex items-center gap-2 mb-2">
               <CheckCircle className="text-[#8df5e4] w-5 h-5 fill-current" />
               <span className="text-xs font-bold uppercase tracking-wider text-[#d6e3ff]">
-                Eligibility Status
+                {t("home.eligibility_status")}
               </span>
             </div>
             <h3 className="text-4xl md:text-5xl font-bold tracking-tight">
-              {eligibleSchemesCount} Schemes
+              {t("home.schemes_count", { count: eligibleSchemesCount })}
             </h3>
             <p className="text-[#a9c7ff] text-sm mt-2 max-w-[450px]">
-              You qualify for these schemes based on your age, state, and profile criteria. Keep your documents updated to apply immediately.
+              {t("home.schemes_count_desc")}
             </p>
           </div>
 
@@ -104,7 +118,7 @@ export default function Home({
               onClick={() => onNavigate("schemes")}
               className="bg-white text-[#004d99] font-bold text-sm px-5 py-3 rounded-full flex items-center gap-2 hover:bg-gray-100 transition-colors shadow-sm cursor-pointer"
             >
-              <span>View Eligible Schemes</span>
+              <span>{t("home.view_eligible_schemes")}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -117,23 +131,23 @@ export default function Home({
             <Hourglass className="w-7 h-7" />
           </div>
           <h4 className="text-xl font-bold text-gray-900 relative z-10">
-            {activeApplicationsCount} Active
+            {t("home.active_applications", { count: activeApplicationsCount })}
           </h4>
           <p className="text-sm text-gray-500 mt-1 relative z-10">
-            Applications processing
+            {t("home.applications_processing")}
           </p>
           <button 
             onClick={() => onNavigate("documents")}
-            className="mt-5 text-[#004d99] font-bold text-sm hover:underline hover:text-[#00366c] relative z-10 cursor-pointer"
+            className="mt-5 text-[#004d99] font-bold text-sm hover:underline hover:text-[#00366c] relative z-10 cursor-pointer bg-transparent border-none"
           >
-            Track Application Status
+            {t("home.track_status")}
           </button>
         </div>
       </section>
 
       {/* Quick Actions Grid */}
       <section className="space-y-4">
-        <h3 className="text-xl font-bold text-gray-900">Quick Actions</h3>
+        <h3 className="text-xl font-bold text-gray-900">{t("home.quick_actions")}</h3>
         <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
           <button 
             onClick={() => onNavigate("eligibility")}
@@ -143,7 +157,7 @@ export default function Home({
               <ClipboardCheck className="w-6 h-6" />
             </div>
             <span className="text-xs font-semibold text-gray-600 mt-3 text-center leading-tight">
-              Check<br />Eligibility
+              {t("action.check_eligibility")}
             </span>
           </button>
 
@@ -156,7 +170,7 @@ export default function Home({
             </div>
             <div className="absolute top-2 right-4 w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
             <span className="text-xs font-semibold text-gray-600 mt-3 text-center leading-tight">
-              Ask AI<br />Assistant
+              {t("action.ask_ai")}
             </span>
           </button>
 
@@ -168,7 +182,7 @@ export default function Home({
               <Upload className="w-6 h-6" />
             </div>
             <span className="text-xs font-semibold text-gray-600 mt-3 text-center leading-tight">
-              Upload<br />Documents
+              {t("action.upload_docs")}
             </span>
           </button>
 
@@ -180,7 +194,7 @@ export default function Home({
               <Calendar className="w-6 h-6" />
             </div>
             <span className="text-xs font-semibold text-gray-600 mt-3 text-center leading-tight">
-              View<br />Deadlines
+              {t("action.view_deadlines")}
             </span>
           </button>
 
@@ -192,7 +206,7 @@ export default function Home({
               <Award className="w-6 h-6" />
             </div>
             <span className="text-xs font-semibold text-gray-600 mt-3 text-center leading-tight">
-              New<br />Schemes
+              {t("action.new_schemes")}
             </span>
           </button>
 
@@ -204,7 +218,7 @@ export default function Home({
               <MapPin className="w-6 h-6" />
             </div>
             <span className="text-xs font-semibold text-gray-600 mt-3 text-center leading-tight">
-              Nearby<br />Offices
+              {t("action.nearby_offices")}
             </span>
           </button>
         </div>
@@ -213,12 +227,12 @@ export default function Home({
       {/* Recommended Schemes Carousel */}
       <section className="space-y-4">
         <div className="flex justify-between items-end">
-          <h3 className="text-xl font-bold text-gray-900">Recommended for You</h3>
+          <h3 className="text-xl font-bold text-gray-900">{t("home.recommended")}</h3>
           <button 
             onClick={() => onNavigate("schemes")}
-            className="text-sm font-semibold text-[#004d99] hover:underline cursor-pointer"
+            className="text-sm font-semibold text-[#004d99] hover:underline cursor-pointer bg-transparent border-none"
           >
-            See all
+            {t("home.see_all")}
           </button>
         </div>
 
@@ -237,7 +251,7 @@ export default function Home({
                     </span>
                     <button 
                       onClick={() => onToggleSaveScheme(scheme.id)}
-                      className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+                      className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer bg-transparent border-none"
                     >
                       <Bookmark className={`w-5 h-5 ${isSaved ? "text-red-500 fill-current" : ""}`} />
                     </button>
@@ -251,12 +265,12 @@ export default function Home({
                 </div>
 
                 <div className="flex justify-between items-center pt-4 border-t border-gray-50">
-                  <span className="text-xs font-bold text-[#006b5f]">Match Rate: 95%</span>
+                  <span className="text-xs font-bold text-[#006b5f]">{t("home.match_rate", { rate: 95 })}</span>
                   <button 
                     onClick={() => onViewSchemeDetails(scheme)}
-                    className="text-[#004d99] font-bold text-sm hover:underline cursor-pointer"
+                    className="text-[#004d99] font-bold text-sm hover:underline cursor-pointer bg-transparent border-none"
                   >
-                    View Details
+                    {t("home.view_details")}
                   </button>
                 </div>
               </div>
@@ -267,7 +281,7 @@ export default function Home({
 
       {/* Recent Updates Notifications */}
       <section className="space-y-4">
-        <h3 className="text-xl font-bold text-gray-900">Recent Updates</h3>
+        <h3 className="text-xl font-bold text-gray-900">{t("home.recent_updates")}</h3>
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-100">
           {notifications.slice(0, 3).map((item) => (
             <div 
