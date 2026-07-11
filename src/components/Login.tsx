@@ -42,6 +42,8 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showResendBtn, setShowResendBtn] = useState(false);
+  const [useMagicLink, setUseMagicLink] = useState(false);
 
   // Initialize Recaptcha Verifier on mount/method change
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
@@ -185,12 +187,41 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     }
   };
 
-  // -------- EMAIL & PASSWORD FLOW --------
+  // -------- EMAIL & PASSWORD FLOW / MAGIC LINK --------
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccessMessage(null);
+    setShowResendBtn(false);
     setLoading(true);
+
+    if (useMagicLink) {
+      if (!email) {
+        setError("Please enter your Email Address.");
+        setLoading(false);
+        return;
+      }
+      try {
+        const { error: magicLinkError } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: window.location.origin,
+            data: fullName ? { full_name: fullName } : {}
+          }
+        });
+
+        if (magicLinkError) {
+          setError(magicLinkError.message);
+        } else {
+          setSuccessMessage("An authenticated sign-in link has been sent to your email! Please check your inbox and click the link to confirm your email and log in.");
+        }
+      } catch (err: any) {
+        setError(err.message || "Failed to send magic link.");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
 
     if (!email || !password) {
       setError("Please fill in all fields.");
@@ -213,7 +244,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           options: {
             data: {
               full_name: fullName,
-              phone: "+91 9876543210"
+              phone: ""
             }
           }
         });
@@ -224,8 +255,11 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           return;
         }
 
-        if (!data.session) {
-          setSuccessMessage("Check your email and confirm your account before logging in.");
+        const isConfirmed = data.session?.user?.email_confirmed_at || data.user?.email_confirmed_at;
+
+        if (!data.session || !isConfirmed) {
+          await supabase.auth.signOut();
+          setSuccessMessage("Citizen account created! An authenticated confirmation link has been sent to your email. Please verify your email first before logging in.");
           setLoading(false);
           return;
         }
@@ -242,7 +276,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
         onLoginSuccess({
           name: fullName,
-          phone: "+91 9876543210",
+          phone: "",
           email: email
         });
       } else {
@@ -260,6 +294,24 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
         if (!data.session) {
           setError("No active session found. Please verify your email first.");
+          setLoading(false);
+          return;
+        }
+
+        const isConfirmed = data.session?.user?.email_confirmed_at || data.user?.email_confirmed_at;
+        if (!isConfirmed) {
+          // Automatically resend a confirmation email
+          try {
+            await supabase.auth.resend({
+              type: "signup",
+              email: email
+            });
+          } catch (resendErr) {
+            console.warn("Could not resend email verification link:", resendErr);
+          }
+          await supabase.auth.signOut();
+          setError("Your email address has not been verified yet. We have automatically sent a new authenticated verification link to your email. Please click the link to confirm your account and log in.");
+          setShowResendBtn(true);
           setLoading(false);
           return;
         }
@@ -283,6 +335,32 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     } catch (err: any) {
       console.error("Email auth error:", err);
       setError(err.message || "Authentication failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      setError("Please enter your email address to resend the verification link.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: "signup",
+        email: email
+      });
+      if (resendError) {
+        setError(resendError.message);
+      } else {
+        setSuccessMessage("A fresh authenticated verification link has been sent! Please check your inbox and verify your account.");
+        setShowResendBtn(false);
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to resend verification email.");
     } finally {
       setLoading(false);
     }
@@ -656,6 +734,46 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 transition={{ duration: 0.2 }}
                 className="w-full flex flex-col gap-4"
               >
+                {!isSignUp && (
+                  <div className="flex bg-gray-100 p-1 rounded-xl mb-1">
+                    <button
+                      type="button"
+                      onClick={() => { setUseMagicLink(false); setError(null); setSuccessMessage(null); setShowResendBtn(false); }}
+                      className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                        !useMagicLink 
+                          ? "bg-white text-[#004d99] shadow-sm" 
+                          : "text-gray-500 hover:text-gray-900"
+                      }`}
+                    >
+                      Use Password
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setUseMagicLink(true); setError(null); setSuccessMessage(null); setShowResendBtn(false); }}
+                      className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                        useMagicLink 
+                          ? "bg-white text-[#004d99] shadow-sm" 
+                          : "text-gray-500 hover:text-gray-900"
+                      }`}
+                    >
+                      Magic Link (Email OTP)
+                    </button>
+                  </div>
+                )}
+
+                {showResendBtn && (
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={loading}
+                    className="w-full h-11 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 disabled:opacity-50 text-white rounded-full flex items-center justify-center font-bold shadow-sm transition-all cursor-pointer text-sm mb-1"
+                  >
+                    Resend Verification Link
+                  </motion.button>
+                )}
+
                 <form onSubmit={handleEmailAuth} className="flex flex-col gap-4">
                   {isSignUp && (
                     <div className="flex flex-col gap-1">
@@ -693,51 +811,53 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-1">
-                    <div className="flex justify-between items-center">
-                      <label className="text-xs font-bold text-gray-600">Password</label>
-                      {!isSignUp && (
+                  {!useMagicLink && (
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between items-center">
+                        <label className="text-xs font-bold text-gray-600">Password</label>
+                        {!isSignUp && (
+                          <button
+                            type="button"
+                            onClick={handlePasswordReset}
+                            className="text-[11px] font-bold text-[#004d99] hover:underline cursor-pointer"
+                          >
+                            Forgot Password?
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex relative rounded-xl border border-gray-300 focus-within:border-[#004d99] focus-within:ring-2 focus-within:ring-[#004d99]/20 bg-white transition-all overflow-hidden">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          required={!useMagicLink}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="flex-1 h-11 px-4 text-sm text-[#191c1e] outline-none"
+                        />
                         <button
                           type="button"
-                          onClick={handlePasswordReset}
-                          className="text-[11px] font-bold text-[#004d99] hover:underline cursor-pointer"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                         >
-                          Forgot Password?
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
-                      )}
+                      </div>
                     </div>
-                    <div className="flex relative rounded-xl border border-gray-300 focus-within:border-[#004d99] focus-within:ring-2 focus-within:ring-[#004d99]/20 bg-white transition-all overflow-hidden">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        placeholder="••••••••"
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="flex-1 h-11 px-4 text-sm text-[#191c1e] outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
+                  )}
 
                   <button
                     type="submit"
                     disabled={loading}
                     className="w-full h-11 bg-[#004d99] hover:bg-[#003c78] active:bg-[#002e5c] disabled:opacity-50 text-white rounded-full flex items-center justify-center font-bold shadow-sm transition-all cursor-pointer text-sm mt-2"
                   >
-                    {loading ? "Please wait..." : isSignUp ? "Create Citizen Account" : "Login"}
+                    {loading ? "Please wait..." : isSignUp ? "Create Citizen Account" : useMagicLink ? "Send Magic Link" : "Login"}
                   </button>
                 </form>
 
                 <div className="text-center mt-1">
                   <button
                     type="button"
-                    onClick={() => { setIsSignUp(!isSignUp); setError(null); setSuccessMessage(null); }}
+                    onClick={() => { setIsSignUp(!isSignUp); setError(null); setSuccessMessage(null); setShowResendBtn(false); }}
                     className="text-xs font-bold text-[#004d99] hover:underline cursor-pointer"
                   >
                     {isSignUp ? "Already have an account? Sign In" : "New to JanSathi? Create an Account"}
