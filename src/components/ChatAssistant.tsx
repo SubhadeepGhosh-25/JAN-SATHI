@@ -1,10 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { motion } from "motion/react";
-import { Sparkles, Send, RefreshCw, HelpCircle, ShieldAlert, Bot, User } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { 
+  Sparkles, Send, RefreshCw, HelpCircle, ShieldAlert, Bot, User,
+  Mic, MicOff, Volume2, VolumeX, Play, Pause, Square, Volume1
+} from "lucide-react";
 import { ChatMessage } from "../types";
 import { auth } from "../lib/firebase";
 import { getChatHistory, saveChatMessage } from "../lib/firebaseService";
 import { useTranslation } from "../lib/translations";
+import MarkdownRenderer from "./MarkdownRenderer";
 
 interface ChatAssistantProps {
   initialPrompt?: string;
@@ -37,6 +41,196 @@ export default function ChatAssistant({ initialPrompt, onClearPrompt, preferredL
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Voice Input (Speech-to-Text) States
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+  const recognitionRef = useRef<any>(null);
+
+  // Voice Output (Text-to-Speech) States
+  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
+  const [isSpeakingPaused, setIsSpeakingPaused] = useState(false);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      setSpeechSupported(true);
+      const rec = new SpeechRecognition();
+      rec.continuous = true;
+      rec.interimResults = true;
+      
+      // Map preferredLanguage to standard language code for local speech models
+      let langCode = "en-IN";
+      if (preferredLanguage) {
+        const lang = preferredLanguage.toLowerCase();
+        if (lang.includes("hindi") || lang.includes("हिन्दी")) langCode = "hi-IN";
+        else if (lang.includes("marathi") || lang.includes("मराठी")) langCode = "mr-IN";
+        else if (lang.includes("tamil") || lang.includes("தமிழ்")) langCode = "ta-IN";
+        else if (lang.includes("telugu") || lang.includes("తెలుగు")) langCode = "te-IN";
+        else if (lang.includes("bengali") || lang.includes("বাংলা")) langCode = "bn-IN";
+      }
+      rec.lang = langCode;
+
+      rec.onresult = (event: any) => {
+        let interimTranscript = "";
+        let finalTranscript = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        const currentText = finalTranscript || interimTranscript;
+        if (currentText) {
+          setVoiceTranscript(currentText);
+          setInput(currentText);
+        }
+      };
+
+      rec.onerror = (event: any) => {
+        console.error("Speech recognition error:", event.error);
+        if (event.error !== "no-speech") {
+          setIsListening(false);
+        }
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = rec;
+    }
+  }, [preferredLanguage]);
+
+  // Voice recording toggle controls
+  const startListening = () => {
+    if (!speechSupported || !recognitionRef.current) {
+      alert("Voice recognition is not supported or initialized in your browser.");
+      return;
+    }
+    
+    // Auto-stop any active reading to avoid overlap
+    stopSpeaking();
+
+    setVoiceTranscript("");
+    setInput("");
+    setIsListening(true);
+    try {
+      recognitionRef.current.start();
+    } catch (err) {
+      console.warn("Speech recognition start failed:", err);
+    }
+  };
+
+  const stopListening = (shouldSubmit = true) => {
+    if (!recognitionRef.current) return;
+    try {
+      recognitionRef.current.stop();
+    } catch (err) {
+      console.warn("Speech recognition stop failed:", err);
+    }
+    setIsListening(false);
+    
+    if (shouldSubmit && voiceTranscript.trim()) {
+      handleSendMessage(voiceTranscript);
+      setVoiceTranscript("");
+    }
+  };
+
+  // Speak response out loud (Text-to-Speech)
+  const speakResponse = (messageId: string, text: string) => {
+    if (!("speechSynthesis" in window)) {
+      alert("Text-to-speech reading is not supported in this browser.");
+      return;
+    }
+
+    if (speakingMessageId === messageId) {
+      if (isSpeakingPaused) {
+        window.speechSynthesis.resume();
+        setIsSpeakingPaused(false);
+      } else {
+        window.speechSynthesis.pause();
+        setIsSpeakingPaused(true);
+      }
+      return;
+    }
+
+    // Cancel active synthesis
+    window.speechSynthesis.cancel();
+    
+    // Strip markdown formatting and disclaimers for clean natural voice reading
+    const plainText = text
+      .replace(/\*\*([^*]+)\*\*/g, "$1") // Bold markup removal
+      .replace(/###?\s+/g, "")           // Subheaders removal
+      .replace(/[\*\-•]\s*/g, "")        // Bullet points removal
+      .replace(/Disclaimer:.*/i, "")     // Disclaimer voice skip
+      .replace(/अस्वीकरण:.*/g, "")
+      .replace(/दामित्याग:.*/g, "")
+      .replace(/பொறுப்புத் துறப்பு:.*/g, "")
+      .trim();
+
+    const utterance = new SpeechSynthesisUtterance(plainText);
+    
+    let langCode = "en-IN";
+    if (preferredLanguage) {
+      const lang = preferredLanguage.toLowerCase();
+      if (lang.includes("hindi") || lang.includes("हिन्दी")) langCode = "hi-IN";
+      else if (lang.includes("marathi") || lang.includes("मराठी")) langCode = "mr-IN";
+      else if (lang.includes("tamil") || lang.includes("தமிழ்")) langCode = "ta-IN";
+      else if (lang.includes("telugu") || lang.includes("తెలుగు")) langCode = "te-IN";
+      else if (lang.includes("bengali") || lang.includes("বাংলা")) langCode = "bn-IN";
+    }
+    utterance.lang = langCode;
+
+    // Retrieve best possible local voice matching the accent
+    const voices = window.speechSynthesis.getVoices();
+    const matchingVoice = voices.find(v => v.lang.startsWith(langCode.substring(0, 2)));
+    if (matchingVoice) {
+      utterance.voice = matchingVoice;
+    }
+
+    utterance.onend = () => {
+      setSpeakingMessageId(null);
+      setIsSpeakingPaused(false);
+    };
+
+    utterance.onerror = (e) => {
+      console.warn("TTS playback issue:", e);
+      setSpeakingMessageId(null);
+      setIsSpeakingPaused(false);
+    };
+
+    utteranceRef.current = utterance;
+    setSpeakingMessageId(messageId);
+    setIsSpeakingPaused(false);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const stopSpeaking = () => {
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    setSpeakingMessageId(null);
+    setIsSpeakingPaused(false);
+  };
+
+  // Cancel sound on leaving screen
+  useEffect(() => {
+    return () => {
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (_) {}
+      }
+    };
+  }, []);
 
   const presetPrompts = [
     t("chat.starter_1"),
@@ -89,6 +283,9 @@ export default function ChatAssistant({ initialPrompt, onClearPrompt, preferredL
   const handleSendMessage = async (textToSend: string) => {
     if (!textToSend.trim() || isLoading) return;
 
+    // Immediately stop reading previous messages
+    stopSpeaking();
+
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       role: "user",
@@ -116,7 +313,8 @@ export default function ChatAssistant({ initialPrompt, onClearPrompt, preferredL
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: textToSend,
-          history: historyPayload
+          history: historyPayload,
+          preferredLanguage: preferredLanguage
         })
       });
 
@@ -160,7 +358,7 @@ export default function ChatAssistant({ initialPrompt, onClearPrompt, preferredL
   };
 
   return (
-    <div className="flex flex-col h-[600px] bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+    <div className="relative flex flex-col h-[600px] bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
       {/* Top Title Bar */}
       <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-white z-10 shrink-0">
         <div className="flex items-center gap-2.5">
@@ -217,9 +415,64 @@ export default function ChatAssistant({ initialPrompt, onClearPrompt, preferredL
                 ? "bg-[#004d99] text-white border-[#004d99]"
                 : "bg-white text-gray-800 border-gray-100"
             }`}>
-              <div className="whitespace-pre-line font-medium">
-                {msg.parts[0].text}
-              </div>
+              {msg.role === "user" ? (
+                <div className="whitespace-pre-line font-medium">
+                  {msg.parts[0].text}
+                </div>
+              ) : (
+                <>
+                  <MarkdownRenderer content={msg.parts[0].text} preferredLanguage={preferredLanguage} />
+                  <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500 font-semibold select-none">
+                    <button
+                      onClick={() => speakResponse(msg.id, msg.parts[0].text)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-50 hover:bg-[#004d99]/5 hover:text-[#004d99] rounded-xl transition-all border border-gray-100 cursor-pointer text-gray-600 font-bold text-[10px]"
+                    >
+                      {speakingMessageId === msg.id ? (
+                        isSpeakingPaused ? (
+                          <>
+                            <Play className="w-3.5 h-3.5 text-[#004d99]" />
+                            <span>
+                              {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "पढ़ना फिर शुरू करें" :
+                               preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "पुन्हा सुरू करा" :
+                               preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "தொடரவும்" :
+                               preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "మళ్ళీ ప్రారంభించు" :
+                               "Resume Reading"}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <VolumeX className="w-3.5 h-3.5 text-red-500 animate-pulse" />
+                            <span className="text-red-600 font-extrabold">
+                              {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "आवाज़ बंद करें" :
+                               preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "आवाज बंद करा" :
+                               preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "ஒலியை நிறுத்து" :
+                               preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "ఆపండి" :
+                               "Stop Speaking"}
+                            </span>
+                          </>
+                        )
+                      ) : (
+                        <>
+                          <Volume2 className="w-3.5 h-3.5 text-[#006b5f]" />
+                          <span>
+                            {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "विवरण सुनें (Listen)" :
+                             preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "तपशील ऐका (Listen)" :
+                             preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "விவரங்களைக் கேளுங்கள்" :
+                             preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "వివరాలు వినండి (Listen)" :
+                             "Listen scheme details"}
+                          </span>
+                        </>
+                      )}
+                    </button>
+                    {speakingMessageId === msg.id && !isSpeakingPaused && (
+                      <span className="flex gap-1 items-center px-2 py-0.5 bg-teal-50 text-teal-700 text-[9px] rounded-md border border-teal-100 font-bold">
+                        <span className="w-1 h-1 bg-teal-500 rounded-full animate-ping"></span>
+                        <span>Playing Voice</span>
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         ))}
@@ -267,6 +520,20 @@ export default function ChatAssistant({ initialPrompt, onClearPrompt, preferredL
 
       {/* Message Input Box */}
       <div className="p-4 bg-white border-t border-gray-100 flex gap-2 shrink-0">
+        {speechSupported && (
+          <button
+            type="button"
+            onClick={isListening ? () => stopListening(true) : startListening}
+            className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all cursor-pointer shrink-0 border ${
+              isListening
+                ? "bg-red-500 text-white border-red-500 shadow-md animate-pulse"
+                : "bg-teal-50 hover:bg-teal-100/80 text-[#006b5f] border-teal-100 hover:border-teal-200"
+            }`}
+            title="Ask by Voice (ChatGPT style)"
+          >
+            {isListening ? <Square className="w-5 h-5 fill-current" /> : <Mic className="w-5 h-5" />}
+          </button>
+        )}
         <input
           type="text"
           placeholder={t("chat.placeholder")}
@@ -283,6 +550,108 @@ export default function ChatAssistant({ initialPrompt, onClearPrompt, preferredL
           <Send className="w-5 h-5" />
         </button>
       </div>
+
+      {/* ChatGPT-style Voice Recognition Immersive Overlay */}
+      <AnimatePresence>
+        {isListening && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="absolute inset-0 bg-slate-950/95 backdrop-blur-md z-40 flex flex-col items-center justify-between p-8 text-white select-none"
+          >
+            {/* Header: Selected Language Context */}
+            <div className="w-full flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-bold text-gray-400 tracking-wider uppercase">
+                  JanSathi Voice Assistant
+                </span>
+              </div>
+              <div className="px-3 py-1 bg-white/10 rounded-full text-xs font-semibold text-emerald-400 border border-emerald-500/30">
+                {preferredLanguage || "English"}
+              </div>
+            </div>
+
+            {/* Middle: Pulsating Ambient Voice Orb & Waves */}
+            <div className="flex flex-col items-center justify-center space-y-6 my-auto">
+              <div className="relative flex items-center justify-center w-40 h-40">
+                {/* Concentric waves */}
+                <div className="absolute inset-0 rounded-full bg-teal-500/10 animate-ping duration-1000" />
+                <div className="absolute inset-4 rounded-full bg-teal-500/20 animate-pulse duration-700" />
+                <div className="absolute inset-8 rounded-full bg-[#004d99]/30 animate-pulse" />
+                
+                {/* Core Microphone Button */}
+                <button
+                  onClick={() => stopListening(true)}
+                  className="absolute w-24 h-24 bg-gradient-to-tr from-teal-500 to-[#004d99] rounded-full flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-transform border border-white/20 cursor-pointer"
+                >
+                  <Mic className="w-10 h-10 text-white animate-bounce" />
+                </button>
+              </div>
+
+              {/* Status prompt */}
+              <div className="text-center space-y-1">
+                <h3 className="text-lg font-extrabold tracking-tight text-white animate-pulse">
+                  {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "बोलिए, मैं सुन रहा हूँ..." :
+                   preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "बोला, मी ऐकत आहे..." :
+                   preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "பேசுங்கள், நான் கேட்டுக்கொண்டிருக்கிறேன்..." :
+                   preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "మాట్లాడండి, నేను వింటున్నాను..." :
+                   "Listening, please speak..."}
+                </h3>
+                <p className="text-xs text-gray-400 font-medium">
+                  {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "जब आप बोलना समाप्त कर लें तो 'पूरा हुआ' पर क्लिक करें" :
+                   preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "तुम्ही बोलणे पूर्ण केल्यावर 'झाले' वर क्लिक करा" :
+                   preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "நீங்கள் பேசி முடித்ததும் 'முடிந்தது' என்பதை கிளிக் செய்யவும்" :
+                   preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "మీరు మాట్లాడటం ముగించినప్పుడు 'పూర్తయింది' క్లిక్ చేయండి" :
+                   "Click 'Done' when you have finished speaking"}
+                </p>
+              </div>
+            </div>
+
+            {/* Transcript Area */}
+            <div className="w-full max-w-md bg-white/5 border border-white/10 rounded-2xl p-4 min-h-[100px] flex flex-col justify-between">
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-2">
+                Live Transcription
+              </span>
+              <p className="text-sm font-medium leading-relaxed text-gray-200 italic">
+                {voiceTranscript ? `"${voiceTranscript}"` : "..."}
+              </p>
+              <div className="h-2" />
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="w-full max-w-md flex gap-4 mt-6">
+              <button
+                type="button"
+                onClick={() => stopListening(false)}
+                className="flex-1 h-12 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm transition-colors cursor-pointer border border-white/10"
+              >
+                {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "रद्द करें" :
+                 preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "रद्द करा" :
+                 preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "ரத்துசெய்" :
+                 preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "రద్దు చేయి" :
+                 "Cancel"}
+              </button>
+              <button
+                type="button"
+                onClick={() => stopListening(true)}
+                disabled={!voiceTranscript.trim()}
+                className="flex-1 h-12 rounded-xl bg-teal-500 hover:bg-teal-600 disabled:bg-teal-500/40 text-slate-950 font-black text-sm shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>
+                  {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "पूरा हुआ" :
+                   preferredLanguage === "Marathi" || preferredLanguage === "मराठी (Marathi)" ? "झाले" :
+                   preferredLanguage === "Tamil" || preferredLanguage === "தமிழ் (Tamil)" ? "முடிந்தது" :
+                   preferredLanguage === "Telugu" || preferredLanguage === "తెలుగు (Telugu)" ? "పూర్తయింది" :
+                   "Done"}
+                </span>
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

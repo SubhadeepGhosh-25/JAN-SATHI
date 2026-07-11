@@ -100,21 +100,51 @@ async function startServer() {
   // POST /api/chat - Gemini Chat Assistant
   app.post("/api/chat", async (req, res) => {
     try {
-      const { message, history } = req.body;
+      const { message, history, preferredLanguage } = req.body;
       if (!message) {
         return res.status(400).json({ error: "Message is required" });
       }
 
       const ai = getGenAI();
 
+      // Determine regional language context instructions
+      let languagePrompt = "Please respond in English by default. Keep answers professional and warm.";
+      let disclaimerText = 'Disclaimer: Please verify details and eligibility criteria with official government sources before making application decisions.';
+
+      if (preferredLanguage) {
+        const lang = preferredLanguage.toLowerCase();
+        if (lang.includes("hindi") || lang.includes("हिन्दी")) {
+          languagePrompt = "CRITICAL: Write your entire response in Hindi (हिन्दी). Do not use English text blocks. Keep vocabulary simple and natural. Formulate points cleanly in Hindi.";
+          disclaimerText = "अस्वीकरण: आवेदन करने से पहले कृपया आधिकारिक सरकारी स्रोतों के साथ विवरण और पात्रता मानदंडों की पुष्टि करें।";
+        } else if (lang.includes("marathi") || lang.includes("मराठी")) {
+          languagePrompt = "CRITICAL: Write your entire response in Marathi (मराठी). Formulate points cleanly in Marathi.";
+          disclaimerText = "अस्वीकरण: अर्ज करण्यापूर्वी कृपया अधिकृत सरकारी स्त्रोतांसह सर्व तपशील आणि पात्रता निकषांची पडताळणी करा.";
+        } else if (lang.includes("tamil") || lang.includes("தமிழ்")) {
+          languagePrompt = "CRITICAL: Write your entire response in Tamil (தமிழ்). Formulate points cleanly in Tamil.";
+          disclaimerText = "பொறுப்புத் துறப்பு: விண்ணப்பிக்கும் முன் அதிகாரப்பூர்வ அரசு ஆதாரங்களுடன் விவரங்கள் மற்றும் தகுதி வரம்புகளைச் சரிபார்க்கவும்.";
+        } else if (lang.includes("telugu") || lang.includes("తెలుగు")) {
+          languagePrompt = "CRITICAL: Write your entire response in Telugu (తెలుగు). Formulate points cleanly in Telugu.";
+          disclaimerText = "నిరాకరణ: దయచేసి దరఖాస్తు నిర్ణయాలు తీసుకునే ముందు అధికారిక ప్రభుత్వ వనరులతో వివరాలు మరియు అర్హత ప్రమాణాలను ధృవీకరించుకోండి.";
+        } else if (lang.includes("bengali") || lang.includes("বাংলা")) {
+          languagePrompt = "CRITICAL: Write your entire response in Bengali (বাংলা). Formulate points cleanly in Bengali.";
+          disclaimerText = "দাবিত্যাগ: আবেদন করার সিদ্ধান্ত নেওয়ার আগে অনুগ্রহ করে সরকারি পোর্টালের সাথে সমস্ত বিবরণ এবং যোগ্যতা যাচাই করুন।";
+        }
+      }
+
       const systemInstruction = `You are "JanSathi AI", a compassionate, highly knowledgeable, and friendly government scheme discovery assistant for Indian citizens.
+
 Your goals:
 1. Explain eligibility criteria, benefits, and timelines of government schemes in simple, clear, and encouraging language.
 2. List exact documents required and outline clear step-by-step application procedures.
-3. Be highly supportive and write in simple English, or regional languages (Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, etc.) if the user asks.
-4. CRITICAL: Always end your response with a clear, polite disclaimer in bold: "Disclaimer: Please verify details and eligibility criteria with official government sources before making application decisions."
+3. Language Guideline: ${languagePrompt}
+4. WRITING STYLE & FORMATTING RULES:
+   - Always break down your answer into bite-sized, readable paragraphs with plenty of spacing.
+   - Use clean Markdown subheaders (like "### ") to split eligibility, benefits, and step-by-step procedures. Never output a raw unspaced chunk of text.
+   - Use clear bullet points (- or *) or numbered lists (1. 2. 3.) with one point per line for lists.
+   - Use bold words (**word**) for critical parameters like age limits, income caps, documents, and portal names to build visual hierarchy.
+   - Do NOT use massive wall-of-text blocks. Keep descriptions brief and to-the-point.
 5. Do not provide binding legal or medical advice.
-6. Use bullet points, bold keywords, and clean headings to structure your answers for maximum readability.`;
+6. CRITICAL: Always end your response with a clear, polite disclaimer in bold on a new line: "**${disclaimerText}**"`;
 
       const responseText = await callGeminiWithRetryAndFallback(async (modelName) => {
         const chat = ai.chats.create({
