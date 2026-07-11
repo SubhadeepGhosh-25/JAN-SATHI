@@ -4,8 +4,9 @@ import {
   Home as HomeIcon, Award, ClipboardCheck, ShieldCheck, 
   Sparkles, Users, Calendar, User, Bell, Landmark 
 } from "lucide-react";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged, signOut, signInAnonymously } from "firebase/auth";
 import { auth } from "./lib/firebase";
+import { supabase } from "./supabaseClient";
 import {
   seedSchemesIfEmpty,
   getUserProfile,
@@ -64,117 +65,113 @@ export default function App() {
 
   // User Profile State
   const [userProfile, setUserProfile] = useState<UserProfile>({
-    name: "Rahul Sharma",
-    email: "rahul.sharma@gmail.com",
-    phone: "+91 9876543210",
-    state: "Delhi",
-    district: "South Delhi",
-    occupation: "Student",
-    income: 150000,
-    gender: "Male",
-    age: 21,
-    education: "Higher Secondary",
-    category: "OBC",
+    name: "",
+    email: "",
+    phone: "",
+    state: "",
+    district: "",
+    occupation: "",
+    income: 0,
+    gender: "",
+    age: 0,
+    education: "",
+    category: "", // Gen, OBC, SC, ST, EWS
     disability: false,
     preferredLanguage: "English"
   });
 
   // Stored Data Lists
-  const [documents, setDocuments] = useState<DocumentFile[]>([
-    {
-      id: "doc-1",
-      documentType: "Aadhaar Card",
-      documentId: "5423 8812 9011",
-      holderName: "Rahul Sharma",
-      dob: "2005-08-12",
-      gender: "Male",
-      state: "Delhi",
-      verified: true,
-      uploadedAt: "2026-06-15"
-    }
-  ]);
+  const [documents, setDocuments] = useState<DocumentFile[]>([]);
 
-  const [reminders, setReminders] = useState<Reminder[]>([
-    {
-      id: "rem-1",
-      title: "Submit PM Vidyalakshmi Application Documents",
-      schemeName: "PM Vidyalakshmi Scheme",
-      dueDate: "2026-09-30",
-      type: "Deadline",
-      completed: false
-    },
-    {
-      id: "rem-2",
-      title: "Renew Income Certificate",
-      schemeName: "Ayushman Bharat - PM-JAY",
-      dueDate: "2026-08-15",
-      type: "Certificate Expiry",
-      completed: false
-    }
-  ]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
 
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([
-    {
-      id: "fam-1",
-      name: "Suresh Sharma",
-      relationship: "Parent",
-      age: 62,
-      gender: "Male",
-      occupation: "Retired",
-      income: 80000,
-      category: "OBC",
-      education: "Secondary",
-      disability: false,
-      state: "Delhi"
-    }
-  ]);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
 
-  const [applications, setApplications] = useState<Application[]>([
-    {
-      id: "app-1",
-      schemeId: "sch-1",
-      schemeName: "PM Vidyalakshmi Scheme",
-      applicantName: "Rahul Sharma",
-      status: "Under Review",
-      submittedAt: "2026-07-01",
-      documentsAttached: ["Mark sheets of 10th & 12th Std", "Aadhaar Card"],
-      formValues: {}
-    }
-  ]);
+  const [applications, setApplications] = useState<Application[]>([]);
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([
     {
       id: "not-1",
-      title: "Vidyalakshmi Loan Interest Subvention Updated",
-      body: "Central cabinet increases subsidy thresholds for low income students.",
-      time: "2 hours ago",
+      title: "Scheme System Online",
+      body: "JanSathi eligibility index and Central databases loaded successfully.",
+      time: "Just now",
       type: "new_releases",
       unread: true
-    },
-    {
-      id: "not-2",
-      title: "Income Certificate Successfully Audited",
-      body: "Your certificate is verified with digital lockers.",
-      time: "1 day ago",
-      type: "task_alt",
-      unread: false
     }
   ]);
 
-  const [savedSchemeIds, setSavedSchemeIds] = useState<string[]>(["sch-1", "sch-3"]);
+  const [savedSchemeIds, setSavedSchemeIds] = useState<string[]>([]);
 
   // Active form application flow
   const [activeApplyScheme, setActiveApplyScheme] = useState<Scheme | null>(null);
   const [chatInitialPrompt, setChatInitialPrompt] = useState<string>("");
 
-  // Firebase auth state observer & initial data loading
+  // 1. Initial Supabase session protection & routing
   useEffect(() => {
-    // Attempt seeding government schemes to Firestore if empty
     seedSchemesIfEmpty();
 
+    const protectRouteAndSync = async () => {
+      setLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          // If no session exists, redirect to login
+          window.history.pushState({}, "", "/login");
+          setAppStep("LOGIN");
+          setLoading(false);
+        } else {
+          // If session exists, sync with Firebase
+          if (!auth.currentUser) {
+            try {
+              await signInAnonymously(auth);
+            } catch (anonErr) {
+              console.warn("Could not sign in anonymously to Firebase on session restoration:", anonErr);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error during session restoration:", err);
+        setLoading(false);
+      }
+    };
+
+    protectRouteAndSync();
+
+    // 2. Continuous Supabase session state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!session) {
+        window.history.pushState({}, "", "/login");
+        setAppStep("LOGIN");
+      } else {
+        if (!auth.currentUser) {
+          try {
+            await signInAnonymously(auth);
+          } catch (anonErr) {
+            console.warn("Could not sign in anonymously to Firebase on session change:", anonErr);
+          }
+        }
+        setAppStep("DASHBOARD");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // 3. Keep existing data-loading useEffect bound to Firebase user state
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setFirebaseUser(user);
       if (user) {
+        // Only load data if we actually have a Supabase session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setAppStep("LOGIN");
+          setLoading(false);
+          return;
+        }
+
         setLoading(true);
         try {
           // 1. Load dynamic government schemes
@@ -187,17 +184,17 @@ export default function App() {
           let profile = await getUserProfile(user.uid);
           if (!profile) {
             profile = {
-              name: user.displayName || "Rahul Sharma",
-              email: user.email || "rahul.sharma@gmail.com",
-              phone: user.phoneNumber || "+91 9876543210",
-              state: "Delhi",
-              district: "South Delhi",
-              occupation: "Student",
-              income: 150000,
-              gender: "Male",
-              age: 21,
-              education: "Higher Secondary",
-              category: "OBC",
+              name: session.user?.user_metadata?.full_name || user.displayName || "Citizen",
+              email: session.user?.email || user.email || "",
+              phone: session.user?.user_metadata?.phone || user.phoneNumber || "",
+              state: "",
+              district: "",
+              occupation: "",
+              income: 0,
+              gender: "",
+              age: 0,
+              education: "",
+              category: "",
               disability: false,
               preferredLanguage: "English"
             };
@@ -244,13 +241,11 @@ export default function App() {
           setAppStep("DASHBOARD");
         } catch (error) {
           console.error("Error fetching user session from Firebase:", error);
-          // Fallback to offline defaults
           setAppStep("DASHBOARD");
         } finally {
           setLoading(false);
         }
       } else {
-        // Safe redirect to onboarding/login
         setLoading(false);
       }
     });
@@ -436,9 +431,10 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
+      await supabase.auth.signOut();
       await signOut(auth);
     } catch (err) {
-      console.error("Firebase logout error:", err);
+      console.error("Logout error:", err);
     }
     setFirebaseUser(null);
     setAppStep("LOGIN");
@@ -451,8 +447,9 @@ export default function App() {
         {/* Step 1: Splash Screen */}
         {appStep === "SPLASH" && (
           <motion.div key="splash" exit={{ opacity: 0 }}>
-            <Splash onComplete={() => {
-              if (auth.currentUser) {
+            <Splash onComplete={async () => {
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session) {
                 setAppStep("DASHBOARD");
               } else {
                 const onboarded = localStorage.getItem("jansathi_onboarded") === "true";

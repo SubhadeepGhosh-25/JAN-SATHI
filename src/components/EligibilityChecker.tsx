@@ -16,13 +16,13 @@ export default function EligibilityChecker({
   onApplyProfile,
   onViewSchemeDetails
 }: EligibilityCheckerProps) {
-  const [age, setAge] = useState<number>(userProfile.age || 25);
-  const [state, setState] = useState<string>(userProfile.state || "Delhi");
-  const [occupation, setOccupation] = useState<string>(userProfile.occupation || "Student");
-  const [income, setIncome] = useState<number>(userProfile.income || 150000);
-  const [gender, setGender] = useState<string>(userProfile.gender || "Male");
-  const [category, setCategory] = useState<string>(userProfile.category || "OBC");
-  const [education, setEducation] = useState<string>(userProfile.education || "Higher Secondary");
+  const [age, setAge] = useState<number | "">(userProfile.age || "");
+  const [state, setState] = useState<string>(userProfile.state || "");
+  const [occupation, setOccupation] = useState<string>(userProfile.occupation || "");
+  const [income, setIncome] = useState<number | "">(userProfile.income !== undefined ? userProfile.income : "");
+  const [gender, setGender] = useState<string>(userProfile.gender || "");
+  const [category, setCategory] = useState<string>(userProfile.category || "");
+  const [education, setEducation] = useState<string>(userProfile.education || "");
   const [disability, setDisability] = useState<boolean>(userProfile.disability || false);
 
   const [matches, setMatches] = useState<Scheme[]>([]);
@@ -48,16 +48,24 @@ export default function EligibilityChecker({
   const handleCheck = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const parsedAge = age === "" ? 0 : Number(age);
+    const parsedIncome = income === "" ? 0 : Number(income);
+
+    if (!parsedAge || !state || !category || !gender || !occupation || !education) {
+      alert("Please specify all details (Age, State, Gender, Category, Occupation, Education) to calculate eligibility.");
+      return;
+    }
+
     // Check scheme eligibility matching algorithm
     const eligible = schemes.filter(scheme => {
       const rule = scheme.eligibility;
 
       // Age Check
-      if (rule.minAge && age < rule.minAge) return false;
-      if (rule.maxAge && age > rule.maxAge) return false;
+      if (rule.minAge && parsedAge < rule.minAge) return false;
+      if (rule.maxAge && parsedAge > rule.maxAge) return false;
 
       // Income Check
-      if (rule.maxIncome && income > rule.maxIncome) return false;
+      if (rule.maxIncome && parsedIncome > rule.maxIncome) return false;
 
       // Gender Check
       if (rule.genders && rule.genders.length > 0 && !rule.genders.includes(gender)) return false;
@@ -77,10 +85,10 @@ export default function EligibilityChecker({
     // Sync state back to main app
     onApplyProfile({
       ...userProfile,
-      age,
+      age: parsedAge,
       state,
       occupation,
-      income,
+      income: parsedIncome,
       gender,
       category,
       education,
@@ -119,7 +127,8 @@ export default function EligibilityChecker({
                 max={120}
                 required
                 value={age}
-                onChange={(e) => setAge(parseInt(e.target.value) || 0)}
+                onChange={(e) => setAge(e.target.value === "" ? "" : parseInt(e.target.value) || 0)}
+                placeholder="e.g. 25"
                 className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-[#004d99] focus:ring-1 focus:ring-[#004d99]/20 outline-none"
               />
             </div>
@@ -130,8 +139,10 @@ export default function EligibilityChecker({
               <select
                 value={state}
                 onChange={(e) => setState(e.target.value)}
+                required
                 className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-[#004d99] focus:ring-1 focus:ring-[#004d99]/20 outline-none"
               >
+                <option value="">Select Resident State</option>
                 {statesList.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
@@ -142,8 +153,10 @@ export default function EligibilityChecker({
               <select
                 value={occupation}
                 onChange={(e) => setOccupation(e.target.value)}
+                required
                 className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-[#004d99] focus:ring-1 focus:ring-[#004d99]/20 outline-none"
               >
+                <option value="">Select Occupation</option>
                 {occupationsList.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
@@ -156,7 +169,8 @@ export default function EligibilityChecker({
                 min={0}
                 required
                 value={income}
-                onChange={(e) => setIncome(parseInt(e.target.value) || 0)}
+                onChange={(e) => setIncome(e.target.value === "" ? "" : parseInt(e.target.value) || 0)}
+                placeholder="e.g. 150000"
                 className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-[#004d99] focus:ring-1 focus:ring-[#004d99]/20 outline-none"
               />
             </div>
@@ -188,8 +202,10 @@ export default function EligibilityChecker({
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
+                required
                 className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-[#004d99] focus:ring-1 focus:ring-[#004d99]/20 outline-none"
               >
+                <option value="">Select Social Category</option>
                 {categoriesList.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
@@ -200,8 +216,10 @@ export default function EligibilityChecker({
               <select
                 value={education}
                 onChange={(e) => setEducation(e.target.value)}
+                required
                 className="w-full h-10 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-[#004d99] focus:ring-1 focus:ring-[#004d99]/20 outline-none"
               >
+                <option value="">Select Education Level</option>
                 {educationList.map(ed => <option key={ed} value={ed}>{ed}</option>)}
               </select>
             </div>

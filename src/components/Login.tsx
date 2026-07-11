@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ShieldAlert, ArrowLeft, Smartphone, Key, Lock, Mail, User, Eye, EyeOff, AlertCircle, Sparkles } from "lucide-react";
+import { ShieldAlert, ArrowLeft, Smartphone, Key, Lock, Mail, User, Eye, EyeOff, AlertCircle, Sparkles, CheckCircle } from "lucide-react";
 import { 
   GoogleAuthProvider, 
   signInWithPopup, 
@@ -41,6 +41,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   const [fullName, setFullName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Initialize Recaptcha Verifier on mount/method change
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
@@ -77,6 +78,12 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     e.preventDefault();
     setError(null);
     setLoading(true);
+
+    if (!fullName.trim()) {
+      setError("Please enter your Full Name.");
+      setLoading(false);
+      return;
+    }
 
     if (mobileNumber.length !== 10 || !/^\d+$/.test(mobileNumber)) {
       setError("Please enter a valid 10-digit mobile number.");
@@ -153,7 +160,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         const result = await confirmationResult.confirm(otpCode);
         const user = result.user;
         onLoginSuccess({
-          name: user.displayName || "Rahul Sharma",
+          name: fullName.trim() || user.displayName || "Citizen",
           phone: user.phoneNumber || `+91 ${mobileNumber}`,
           email: user.email || `${mobileNumber}@jansathi.gov.in`
         });
@@ -165,7 +172,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           console.warn("Could not sign in anonymously in demo mode:", anonErr);
         }
         onLoginSuccess({
-          name: "Rahul Sharma (Demo)",
+          name: fullName.trim() || "Citizen",
           phone: `+91 ${mobileNumber}`,
           email: `demo_${mobileNumber}@jansathi.gov.in`
         });
@@ -182,6 +189,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
     setLoading(true);
 
     if (!email || !password) {
@@ -216,6 +224,12 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           return;
         }
 
+        if (!data.session) {
+          setSuccessMessage("Check your email and confirm your account before logging in.");
+          setLoading(false);
+          return;
+        }
+
         // Keep Firebase session synchronized to prevent Firestore permission errors
         try {
           await signInAnonymously(auth);
@@ -244,6 +258,12 @@ export default function Login({ onLoginSuccess }: LoginProps) {
           return;
         }
 
+        if (!data.session) {
+          setError("No active session found. Please verify your email first.");
+          setLoading(false);
+          return;
+        }
+
         // Keep Firebase session synchronized to prevent Firestore permission errors
         try {
           await signInAnonymously(auth);
@@ -255,8 +275,8 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         window.history.pushState({}, "", "/");
 
         onLoginSuccess({
-          name: data.user?.user_metadata?.full_name || "Rahul Sharma",
-          phone: data.user?.user_metadata?.phone || "+91 9876543210",
+          name: data.user?.user_metadata?.full_name || "Citizen",
+          phone: data.user?.user_metadata?.phone || "",
           email: email
         });
       }
@@ -296,9 +316,9 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       onLoginSuccess({
-        name: user.displayName || "Rahul Sharma",
-        phone: user.phoneNumber || "+91 9876543210",
-        email: user.email || "rahul.sharma@gmail.com"
+        name: user.displayName || fullName.trim() || "Citizen",
+        phone: user.phoneNumber || "",
+        email: user.email || ""
       });
     } catch (err: any) {
       console.error("Google sign in error:", err);
@@ -309,24 +329,24 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         try {
           const userCredential = await signInAnonymously(auth);
           onLoginSuccess({
-            name: "Rahul Sharma (Guest)",
-            phone: "+91 9876543210",
+            name: fullName.trim() || "Citizen (Guest)",
+            phone: mobileNumber ? `+91 ${mobileNumber}` : "",
             email: "guest@jansathi.gov.in"
           });
         } catch (anonErr) {
           onLoginSuccess({
-            name: "Rahul Sharma",
-            phone: "+91 9876543210",
-            email: "rahul.sharma@gmail.com"
+            name: fullName.trim() || "Citizen",
+            phone: mobileNumber ? `+91 ${mobileNumber}` : "",
+            email: "guest@jansathi.gov.in"
           });
         }
       } else {
         setError("Could not complete Google Login. Authenticating in local guest mode.");
         setTimeout(() => {
           onLoginSuccess({
-            name: "Rahul Sharma",
-            phone: "+91 9876543210",
-            email: "rahul.sharma@gmail.com"
+            name: fullName.trim() || "Citizen",
+            phone: mobileNumber ? `+91 ${mobileNumber}` : "",
+            email: "guest@jansathi.gov.in"
           });
         }, 1500);
       }
@@ -338,6 +358,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   // -------- DEMO BYPASS SIGN IN FLOW --------
   const handleDemoLogin = async () => {
     setError(null);
+    if (!fullName.trim()) {
+      setError("Please enter your Full Name first to initialize your custom profile.");
+      return;
+    }
     setLoading(true);
     try {
       // Sign in anonymously first to get a valid user UID for Firebase Firestore operations
@@ -347,8 +371,8 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         console.warn("Could not sign in anonymously for sandbox bypass:", anonErr);
       }
       onLoginSuccess({
-        name: "Rahul Sharma (Demo)",
-        phone: "+91 9876543210",
+        name: fullName.trim(),
+        phone: mobileNumber ? `+91 ${mobileNumber}` : "+91 9876543210",
         email: "demo@jansathi.gov.in"
       });
     } catch (err: any) {
@@ -356,8 +380,8 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       setError("Demo login failed. Trying quick local guest mode...");
       setTimeout(() => {
         onLoginSuccess({
-          name: "Rahul Sharma (Guest)",
-          phone: "+91 9876543210",
+          name: fullName.trim() || "Citizen (Guest)",
+          phone: mobileNumber ? `+91 ${mobileNumber}` : "+91 9876543210",
           email: "guest@jansathi.gov.in"
         });
       }, 1000);
@@ -390,7 +414,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             <div className="flex bg-gray-100 p-1 rounded-xl">
               <button
                 type="button"
-                onClick={() => { setAuthMethod("PHONE"); setError(null); }}
+                onClick={() => { setAuthMethod("PHONE"); setError(null); setSuccessMessage(null); }}
                 className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   authMethod === "PHONE" 
                     ? "bg-white text-[#004d99] shadow-sm" 
@@ -401,7 +425,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
               </button>
               <button
                 type="button"
-                onClick={() => { setAuthMethod("EMAIL"); setError(null); }}
+                onClick={() => { setAuthMethod("EMAIL"); setError(null); setSuccessMessage(null); }}
                 className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                   authMethod === "EMAIL" 
                     ? "bg-white text-[#004d99] shadow-sm" 
@@ -428,6 +452,17 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             </motion.div>
           )}
 
+          {successMessage && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-start gap-2"
+            >
+              <CheckCircle className="w-4 h-4 mt-0.5 shrink-0 text-emerald-600" />
+              <span className="font-semibold">{successMessage}</span>
+            </motion.div>
+          )}
+
           {resetSent && (
             <motion.div 
               initial={{ opacity: 0, y: -10 }}
@@ -451,6 +486,27 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 className="w-full flex flex-col gap-6"
               >
                 <form onSubmit={handleGetOtp} className="flex flex-col gap-5">
+                  {/* Full Name Field */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-sm font-semibold text-gray-700" htmlFor="phone-name-input">
+                      Full Name
+                    </label>
+                    <div className="flex relative rounded-xl border border-gray-300 focus-within:border-[#004d99] focus-within:ring-2 focus-within:ring-[#004d99]/20 bg-white transition-all overflow-hidden">
+                      <input
+                        id="phone-name-input"
+                        type="text"
+                        placeholder="Enter your full name"
+                        required
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="flex-1 h-12 px-4 bg-transparent border-none text-base text-[#191c1e] placeholder-gray-400 outline-none focus:outline-none"
+                      />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+                        <User className="w-5 h-5" />
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="flex flex-col gap-2">
                     <label className="text-sm font-semibold text-gray-700" htmlFor="mobile-input">
                       Mobile Number
@@ -681,7 +737,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 <div className="text-center mt-1">
                   <button
                     type="button"
-                    onClick={() => { setIsSignUp(!isSignUp); setError(null); }}
+                    onClick={() => { setIsSignUp(!isSignUp); setError(null); setSuccessMessage(null); }}
                     className="text-xs font-bold text-[#004d99] hover:underline cursor-pointer"
                   >
                     {isSignUp ? "Already have an account? Sign In" : "New to JanSathi? Create an Account"}

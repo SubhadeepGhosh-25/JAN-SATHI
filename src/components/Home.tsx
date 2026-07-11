@@ -29,21 +29,53 @@ export default function Home({
   onViewSchemeDetails,
   onToggleSaveScheme
 }: HomeProps) {
+  const isProfileIncomplete = !userProfile.age || !userProfile.state || !userProfile.category;
+  const profileStrength = isProfileIncomplete ? "Needs Attention (20%)" : "Good (100%)";
+
   return (
     <div className="space-y-8 py-4">
       {/* Greeting Header */}
       <section className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-gray-900">
-            Hello, {userProfile.name.split(" ")[0]}
+            Hello, {userProfile.name ? userProfile.name.split(" ")[0] : "Citizen"}
           </h2>
           <p className="text-gray-500 mt-1">Here is your daily update.</p>
         </div>
-        <div className="hidden md:flex items-center gap-2 bg-[#004d99]/5 px-4 py-2 rounded-xl text-[#004d99] text-sm font-semibold">
-          <Sparkles className="w-4 h-4 text-[#004d99]" />
-          <span>Profile Strength: Good (85%)</span>
+        <div className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold ${
+          isProfileIncomplete 
+            ? "bg-amber-50 text-amber-700 border border-amber-100" 
+            : "bg-[#004d99]/5 text-[#004d99]"
+        }`}>
+          <Sparkles className={`w-4 h-4 ${isProfileIncomplete ? "text-amber-600" : "text-[#004d99]"}`} />
+          <span>Profile Strength: {profileStrength}</span>
         </div>
       </section>
+
+      {/* Profile Incomplete Attention Banner */}
+      {isProfileIncomplete && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-amber-50 border border-amber-200 text-amber-800 p-5 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm"
+        >
+          <div className="flex gap-3">
+            <AlertCircle className="w-5 h-5 mt-0.5 shrink-0 text-amber-600 animate-pulse" />
+            <div>
+              <h4 className="font-bold text-sm text-amber-900">Citizen Parameters Not Setup</h4>
+              <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+                You have not yet specified your age, state, or social category. Please provide this data so JanSathi can accurately find matching government benefits for you.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => onNavigate("eligibility")}
+            className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors cursor-pointer whitespace-nowrap shrink-0 self-end sm:self-center"
+          >
+            Setup Profile Now
+          </button>
+        </motion.div>
+      )}
 
       {/* Eligibility & Application status Bento */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">

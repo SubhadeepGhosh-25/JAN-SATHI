@@ -73,17 +73,23 @@ export default function ProfileView({
         
         {/* User avatar mockup */}
         <div className="w-20 h-20 bg-[#004d99] rounded-2xl flex items-center justify-center text-white text-3xl font-bold shrink-0 shadow-md">
-          {userProfile.name.charAt(0)}
+          {userProfile.name ? userProfile.name.charAt(0) : "C"}
         </div>
 
         <div className="flex-1 text-center md:text-left space-y-1">
-          <h2 className="text-2xl font-bold text-gray-900 leading-tight">{userProfile.name}</h2>
-          <p className="text-sm text-gray-500">{userProfile.email} • {userProfile.phone}</p>
+          <h2 className="text-2xl font-bold text-gray-900 leading-tight">{userProfile.name || "Citizen"}</h2>
+          <p className="text-sm text-gray-500">{userProfile.email || "No Email"} • {userProfile.phone || "No Phone Number"}</p>
           
           <div className="flex flex-wrap justify-center md:justify-start gap-2 pt-2 text-xs">
-            <span className="bg-blue-50 text-[#004d99] px-2.5 py-1 rounded-lg font-bold">Age: {userProfile.age}</span>
-            <span className="bg-teal-50 text-[#006b5f] px-2.5 py-1 rounded-lg font-bold">State: {userProfile.state}</span>
-            <span className="bg-purple-50 text-purple-700 px-2.5 py-1 rounded-lg font-bold">Category: {userProfile.category}</span>
+            <span className="bg-blue-50 text-[#004d99] px-2.5 py-1 rounded-lg font-bold">
+              Age: {userProfile.age ? `${userProfile.age} yrs` : "Not specified"}
+            </span>
+            <span className="bg-teal-50 text-[#006b5f] px-2.5 py-1 rounded-lg font-bold">
+              State: {userProfile.state || "Not specified"}
+            </span>
+            <span className="bg-purple-50 text-purple-700 px-2.5 py-1 rounded-lg font-bold">
+              Category: {userProfile.category || "Not specified"}
+            </span>
           </div>
         </div>
 
