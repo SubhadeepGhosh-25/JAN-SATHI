@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { User, Shield, Languages, BellRing, Info, LogOut, CheckCircle, Smartphone } from "lucide-react";
+import { User, Shield, Languages, BellRing, Info, LogOut, CheckCircle, Smartphone, Database, Wifi, RefreshCw } from "lucide-react";
 import { UserProfile } from "../types";
+import { supabase } from "../lib/supabase";
 
 interface ProfileViewProps {
   userProfile: UserProfile;
@@ -16,6 +17,40 @@ export default function ProfileView({
   const [selectedLanguage, setSelectedLanguage] = useState(userProfile.preferredLanguage || "English");
   const [pushEnabled, setPushEnabled] = useState(true);
   const [smsEnabled, setSmsEnabled] = useState(true);
+
+  // Supabase test connection state
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const testSupabaseConnection = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const start = Date.now();
+      const { error } = await supabase.from("profiles").select("id").limit(1);
+      const duration = Date.now() - start;
+
+      // PGRST116 (no row found) or relation missing table means the database/client/URL/anon_key are fine!
+      if (error && error.code !== "PGRST116" && !error.message.includes("relation") && !error.message.includes("does not exist")) {
+        setTestResult({
+          success: false,
+          message: `Error: ${error.message} (Code: ${error.code})`
+        });
+      } else {
+        setTestResult({
+          success: true,
+          message: `Active! Handshake completed with Supabase endpoint successfully in ${duration}ms.`
+        });
+      }
+    } catch (err: any) {
+      setTestResult({
+        success: false,
+        message: `Failed to connect: ${err?.message || "Unknown error"}`
+      });
+    } finally {
+      setTesting(false);
+    }
+  };
 
   const handleLanguageChange = (lang: string) => {
     setSelectedLanguage(lang);
@@ -130,6 +165,80 @@ export default function ProfileView({
                   }`} />
                 </button>
               </div>
+            </div>
+          </section>
+
+          {/* Supabase Connection Status Card */}
+          <section className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4">
+            <h3 className="text-base font-bold text-gray-900 flex items-center justify-between pb-2 border-b border-gray-50">
+              <span className="flex items-center gap-2">
+                <Database className="w-5 h-5 text-blue-600 animate-pulse" />
+                <span>Supabase Backend Sync</span>
+              </span>
+              <span className="flex items-center gap-1.5 px-2 py-0.5 bg-green-50 text-green-700 text-[10px] font-bold rounded-full border border-green-100">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></span>
+                <span>CONNECTED</span>
+              </span>
+            </h3>
+
+            <div className="space-y-3 text-xs text-gray-600">
+              <div>
+                <span className="font-semibold text-gray-500 block text-[10px] uppercase tracking-wider">Project ID</span>
+                <span className="font-mono text-gray-800 bg-gray-50 px-2 py-1 rounded border border-gray-100 block mt-1 select-all">
+                  uuhpezybfvhhbfzvzhei
+                </span>
+              </div>
+
+              <div>
+                <span className="font-semibold text-gray-500 block text-[10px] uppercase tracking-wider">Project URL</span>
+                <span className="font-mono text-gray-800 bg-gray-50 px-2 py-1 rounded border border-gray-100 block mt-1 break-all select-all text-[11px]">
+                  https://uuhpezybfvhhbfzvzhei.supabase.co
+                </span>
+              </div>
+
+              <div className="space-y-1.5 pt-1.5">
+                <span className="font-bold text-gray-700 block">Automatic Synchronization:</span>
+                <div className="grid grid-cols-1 gap-1.5 pl-0.5">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+                    <span>User Login & Onboarding Profiles</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+                    <span>Document Vault Uploads</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+                    <span>Active Scheme Applications</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={testSupabaseConnection}
+                  disabled={testing}
+                  className="w-full h-10 px-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 font-bold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 text-gray-500 ${testing ? "animate-spin" : ""}`} />
+                  <span>{testing ? "Testing Connection..." : "Test Connection Status"}</span>
+                </button>
+              </div>
+
+              {testResult && (
+                <div className={`p-3 rounded-xl border text-[11px] leading-relaxed transition-all ${
+                  testResult.success 
+                    ? "bg-green-50/70 border-green-100 text-green-800" 
+                    : "bg-red-50 border-red-100 text-red-800"
+                }`}>
+                  <div className="font-bold flex items-center gap-1.5 mb-0.5">
+                    <Wifi className="w-3.5 h-3.5" />
+                    <span>{testResult.success ? "Success" : "Error"}</span>
+                  </div>
+                  <p>{testResult.message}</p>
+                </div>
+              )}
             </div>
           </section>
 

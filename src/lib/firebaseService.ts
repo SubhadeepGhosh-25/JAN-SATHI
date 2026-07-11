@@ -16,6 +16,12 @@ import {
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { db, storage } from "./firebase";
 import { Scheme, UserProfile, FamilyMember, DocumentFile, Application, Reminder, NotificationItem, ChatMessage, SEED_SCHEMES } from "../types";
+import { 
+  syncUserProfileToSupabase, 
+  syncDocumentToSupabase, 
+  deleteDocumentFromSupabase, 
+  syncApplicationToSupabase 
+} from "./supabase";
 
 // Helper to check and seed government schemes
 export async function seedSchemesIfEmpty() {
@@ -60,6 +66,9 @@ export async function saveUserProfile(uid: string, profile: UserProfile): Promis
       updatedAt: new Date().toISOString(),
       lastLogin: new Date().toISOString()
     }, { merge: true });
+
+    // Sync to Supabase in parallel/background
+    await syncUserProfileToSupabase(uid, profile);
   } catch (error) {
     console.error("Error saving user profile:", error);
     throw error;
@@ -148,11 +157,15 @@ export async function getApplications(userId: string): Promise<Application[]> {
 export async function submitApplication(userId: string, app: Application): Promise<void> {
   try {
     const docRef = doc(db, "applications", app.id);
-    await setDoc(docRef, {
+    const updatedApp = {
       ...app,
       userId,
       submittedAt: app.submittedAt || new Date().toISOString()
-    });
+    };
+    await setDoc(docRef, updatedApp);
+
+    // Sync to Supabase in parallel/background
+    await syncApplicationToSupabase(userId, updatedApp);
   } catch (error) {
     console.error("Error submitting application:", error);
     throw error;
@@ -216,6 +229,9 @@ export async function uploadDocumentFile(
       userId
     });
 
+    // Sync to Supabase in parallel/background
+    await syncDocumentToSupabase(userId, newDoc);
+
     return newDoc;
   } catch (error) {
     console.error("Error uploading document:", error);
@@ -227,6 +243,9 @@ export async function deleteDocument(docId: string): Promise<void> {
   try {
     const docRef = doc(db, "documents", docId);
     await deleteDoc(docRef);
+
+    // Sync deletion to Supabase in parallel/background
+    await deleteDocumentFromSupabase(docId);
   } catch (error) {
     console.error("Error deleting document:", error);
     throw error;
