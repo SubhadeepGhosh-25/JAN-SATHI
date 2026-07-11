@@ -1,6 +1,6 @@
 {
   "name": "JanSathi",
   "description": "AI-Powered Indian Government Scheme Discovery & Application Assistant",
-  "requestFramePermissions": ["camera"],
+  "requestFramePermissions": ["camera", "geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { 
   FileText, UploadCloud, CheckCircle2, ShieldCheck, 
   Trash2, RefreshCw, Sparkles, Camera, X, Check,
   AlertCircle, Smartphone, Keyboard, RefreshCw as RotateIcon,
-  User, Calendar, MapPin, CreditCard, ShieldAlert
+  User, Calendar, MapPin, CreditCard, ShieldAlert, Eye, ExternalLink
 } from "lucide-react";
 import { DocumentFile } from "../types";
 import { useTranslation } from "../lib/translations";
@@ -33,6 +33,9 @@ export default function DocumentVault({
 
   // Review & Confirmation state
   const [draftDoc, setDraftDoc] = useState<DocumentFile | null>(null);
+  
+  // Document preview lightbox state
+  const [selectedDocToView, setSelectedDocToView] = useState<DocumentFile | null>(null);
 
   // Live Camera WebRTC states
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -164,6 +167,8 @@ export default function DocumentVault({
     setOcrError(null);
     setDraftDoc(null);
 
+    const fullDataUrl = base64Data.startsWith("data:") ? base64Data : `data:${mimeType};base64,${base64Data}`;
+
     try {
       const response = await fetch("/api/ocr", {
         method: "POST",
@@ -191,6 +196,7 @@ export default function DocumentVault({
         gender: result.gender || "",
         state: result.state || "",
         additionalInfo: result.additionalInfo || "",
+        fileUrl: fullDataUrl,
         verified: true,
         uploadedAt: new Date().toLocaleDateString()
       });
@@ -212,6 +218,7 @@ export default function DocumentVault({
         gender: "",
         state: "",
         additionalInfo: "",
+        fileUrl: fullDataUrl,
         verified: true,
         uploadedAt: new Date().toLocaleDateString()
       });
@@ -514,19 +521,40 @@ export default function DocumentVault({
                             ) : (
                               <Camera className="w-8 h-8 text-gray-500 mx-auto" />
                             )}
-                            {cameraError && (
-                              <p className="text-[10px] text-red-400 font-semibold px-2">{cameraError}</p>
+                            {cameraError ? (
+                              <div className="space-y-3">
+                                <p className="text-[11px] text-amber-300 font-semibold px-2 leading-relaxed">
+                                  {cameraError}
+                                </p>
+                                <div className="border-t border-gray-800/60 my-2"></div>
+                                <p className="text-[10px] text-gray-400">
+                                  {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" 
+                                    ? "या सीधे अपने फोन के कैमरे से फोटो खींचने के लिए नीचे क्लिक करें:" 
+                                    : "Or, click below to take a picture directly using your device's native camera app:"}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => document.getElementById("native-camera-picker")?.click()}
+                                  className="px-4 h-9 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 mx-auto transition-all cursor-pointer border-none shadow-sm"
+                                >
+                                  <Smartphone className="w-3.5 h-3.5 text-white" />
+                                  <span>
+                                    {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "📸 मोबाइल कैमरा से फोटो लें" : "📸 Take Photo with Device Camera"}
+                                  </span>
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={startCamera}
+                                className="px-4 h-9 bg-white hover:bg-gray-100 text-gray-900 font-bold text-xs rounded-xl flex items-center gap-1.5 mx-auto transition-all cursor-pointer border-none"
+                              >
+                                <Camera className="w-3.5 h-3.5 text-gray-700" />
+                                <span>
+                                  {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "कैमरा सक्रिय करें" : "Activate Webcam"}
+                                </span>
+                              </button>
                             )}
-                            <button
-                              type="button"
-                              onClick={startCamera}
-                              className="px-4 h-9 bg-white hover:bg-gray-100 text-gray-900 font-bold text-xs rounded-xl flex items-center gap-1.5 mx-auto transition-all cursor-pointer border-none"
-                            >
-                              <Camera className="w-3.5 h-3.5 text-gray-700" />
-                              <span>
-                                {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "कैमरा सक्रिय करें" : "Activate Webcam"}
-                              </span>
-                            </button>
                           </div>
                         )}
                       </div>
@@ -599,6 +627,39 @@ export default function DocumentVault({
               </div>
 
               <form onSubmit={handleSaveDraft} className="space-y-4 text-xs">
+                {draftDoc.fileUrl && (
+                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 flex flex-col sm:flex-row gap-4 items-center">
+                    <div className="shrink-0">
+                      {draftDoc.fileUrl.startsWith("data:application/pdf") || draftDoc.fileUrl.endsWith(".pdf") ? (
+                        <div className="w-16 h-16 bg-red-50 border border-red-200 text-red-600 rounded-xl flex flex-col items-center justify-center font-bold text-[10px] gap-1">
+                          <FileText className="w-6 h-6 text-red-500" />
+                          <span>PDF</span>
+                        </div>
+                      ) : (
+                        <img 
+                          src={draftDoc.fileUrl} 
+                          alt="Document Preview" 
+                          className="w-16 h-16 object-cover rounded-xl border border-gray-200 shadow-sm"
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                    </div>
+                    <div className="flex-grow text-center sm:text-left space-y-1">
+                      <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded border border-blue-100 uppercase tracking-wider">
+                        {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "स्कैन की गई प्रति" : "Scanned Document Copy"}
+                      </span>
+                      <h4 className="font-bold text-gray-800 text-xs mt-0.5">
+                        {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "दस्तावेज़ की फोटो / पीडीएफ संलग्न है" : "Document photo / PDF copy is loaded"}
+                      </h4>
+                      <p className="text-[10px] text-gray-500 leading-normal">
+                        {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" 
+                          ? "यह प्रति विवरण के साथ सुरक्षित रूप से संग्रहीत की जाएगी।" 
+                          : "This copy will be stored securely with the credentials."}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Doc Type */}
                   <div className="space-y-1">
@@ -708,6 +769,79 @@ export default function DocumentVault({
                     rows={2}
                     className="w-full p-3 bg-white border border-gray-200 rounded-xl font-semibold text-gray-800 outline-none focus:border-[#004d99]"
                   />
+                </div>
+
+                {/* Optional copy attachment for manual entry or changing the file */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="font-bold text-gray-600 block flex items-center gap-1.5">
+                    <UploadCloud className="w-3.5 h-3.5 text-gray-400" />
+                    <span>
+                      {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" 
+                        ? "दस्तावेज़ की फोटो / पीडीएफ प्रति संलग्न करें" 
+                        : "Attach Document Photo / PDF Copy (Optional)"}
+                    </span>
+                  </label>
+                  
+                  {draftDoc.fileUrl ? (
+                    <div className="flex items-center justify-between p-3 bg-green-50 border border-green-100 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        {draftDoc.fileUrl.startsWith("data:image/") ? (
+                          <img 
+                            src={draftDoc.fileUrl} 
+                            alt="Document Thumbnail" 
+                            className="w-10 h-10 object-cover rounded-lg border border-green-200"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 bg-green-100 text-green-700 rounded-lg flex items-center justify-center font-bold text-[10px]">
+                            PDF
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-bold text-green-800 text-[11px]">
+                            {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" ? "प्रति संलग्न है" : "Copy attached"}
+                          </p>
+                          <p className="text-[9px] text-green-600 font-medium">
+                            {draftDoc.fileUrl.startsWith("data:") ? "Ready to upload" : "Stored securely"}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDraftDoc({ ...draftDoc, fileUrl: "" })}
+                        className="text-gray-400 hover:text-red-500 p-1.5 bg-transparent border-none cursor-pointer hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="border border-dashed border-gray-200 rounded-xl p-4 bg-gray-50/50 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors relative cursor-pointer min-h-[70px]">
+                      <UploadCloud className="w-5 h-5 text-gray-400 mb-1" />
+                      <p className="text-[10px] font-bold text-gray-600 text-center">
+                        {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" 
+                          ? "यहाँ क्लिक करके फ़ाइल चुनें या ड्रैग करें" 
+                          : "Click to select or drag document photo/PDF"}
+                      </p>
+                      <input
+                        type="file"
+                        accept="image/*,application/pdf"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              setDraftDoc({
+                                ...draftDoc,
+                                fileUrl: reader.result as string
+                              });
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Action buttons */}
@@ -822,6 +956,35 @@ export default function DocumentVault({
                         </div>
                       </div>
 
+                      {doc.fileUrl && (
+                        <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col gap-2">
+                          <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-xl border border-gray-100">
+                            {doc.fileUrl.startsWith("data:application/pdf") || doc.fileUrl.endsWith(".pdf") || doc.fileUrl.includes("application/pdf") ? (
+                              <FileText className="w-4 h-4 text-red-500 shrink-0" />
+                            ) : (
+                              <div className="w-6 h-6 rounded overflow-hidden border border-gray-200 shrink-0 bg-white">
+                                <img src={doc.fileUrl} className="w-full h-full object-cover" alt="" referrerPolicy="no-referrer" />
+                              </div>
+                            )}
+                            <span className="text-[10px] font-bold text-gray-500 truncate flex-grow">
+                              {doc.fileUrl.startsWith("data:application/pdf") || doc.fileUrl.endsWith(".pdf") || doc.fileUrl.includes("application/pdf") ? "Document_Copy.pdf" : "Document_Photo.jpg"}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDocToView(doc)}
+                            className="w-full h-8 bg-[#004d99]/5 hover:bg-[#004d99]/10 text-[#004d99] hover:text-[#003c78] font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer border-none"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>
+                              {preferredLanguage === "Hindi" || preferredLanguage === "हिन्दी (Hindi)" 
+                                ? "दस्तावेज़ कॉपी देखें" 
+                                : "View Document Copy"}
+                            </span>
+                          </button>
+                        </div>
+                      )}
+
                       <div className="mt-4 pt-3 border-t border-gray-50 flex justify-between items-center text-[10px] text-gray-400 font-semibold">
                         <span>Uploaded: {doc.uploadedAt}</span>
                         <span className="text-[#006b5f] flex items-center gap-1">
@@ -839,6 +1002,99 @@ export default function DocumentVault({
         </div>
 
       </div>
+
+      {/* Lightbox / Document Viewer Modal */}
+      <AnimatePresence>
+        {selectedDocToView && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-3xl bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white">
+                <div>
+                  <h3 className="font-bold text-gray-900 text-base">
+                    {selectedDocToView.documentType}
+                  </h3>
+                  <p className="text-xs text-gray-500 font-semibold">
+                    {selectedDocToView.holderName} • {selectedDocToView.documentId}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedDocToView(null)}
+                  className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-700 cursor-pointer bg-transparent border-none"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Body / Viewer */}
+              <div className="p-6 bg-gray-50 flex-grow overflow-y-auto flex items-center justify-center min-h-[300px]">
+                {selectedDocToView.fileUrl ? (
+                  selectedDocToView.fileUrl.startsWith("data:application/pdf") || selectedDocToView.fileUrl.endsWith(".pdf") || selectedDocToView.fileUrl.includes("application/pdf") ? (
+                    <object
+                      data={selectedDocToView.fileUrl}
+                      type="application/pdf"
+                      className="w-full h-[60vh] rounded-xl border border-gray-200"
+                    >
+                      <div className="text-center p-6 space-y-3">
+                        <FileText className="w-12 h-12 text-gray-400 mx-auto animate-bounce" />
+                        <p className="font-bold text-gray-800 text-sm">PDF Viewer Not Supported</p>
+                        <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                          Your browser does not support inline PDF viewing. Please download the document to view it.
+                        </p>
+                        <a
+                          href={selectedDocToView.fileUrl}
+                          download={`${selectedDocToView.documentType.replace(/\s+/g, "_")}.pdf`}
+                          className="inline-flex items-center gap-1.5 px-4 h-10 bg-[#004d99] text-white font-bold rounded-xl text-xs hover:bg-[#003c78] no-underline"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          <span>Download PDF</span>
+                        </a>
+                      </div>
+                    </object>
+                  ) : (
+                    <img
+                      src={selectedDocToView.fileUrl}
+                      alt={selectedDocToView.documentType}
+                      className="max-w-full max-h-[60vh] object-contain rounded-xl shadow-md border border-gray-200 bg-white"
+                      referrerPolicy="no-referrer"
+                    />
+                  )
+                ) : (
+                  <div className="text-center p-6 text-gray-400">
+                    <FileText className="w-12 h-12 mx-auto mb-2" />
+                    <p className="font-semibold">No Preview Available</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer / Actions */}
+              <div className="p-4 border-t border-gray-100 flex justify-end gap-3 bg-white">
+                {selectedDocToView.fileUrl && (
+                  <a
+                    href={selectedDocToView.fileUrl}
+                    download={`${selectedDocToView.documentType.replace(/\s+/g, "_")}`}
+                    className="h-10 px-4 border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold text-xs rounded-xl flex items-center gap-1.5 justify-center cursor-pointer bg-transparent no-underline"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span>Download Copy</span>
+                  </a>
+                )}
+                <button
+                  onClick={() => setSelectedDocToView(null)}
+                  className="h-10 px-5 bg-[#004d99] hover:bg-[#003c78] text-white font-bold text-xs rounded-xl cursor-pointer border-none"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

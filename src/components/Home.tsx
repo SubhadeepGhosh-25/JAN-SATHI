@@ -211,7 +211,7 @@ export default function Home({
           </button>
 
           <button 
-            onClick={() => onNavigate("profile")}
+            onClick={() => onNavigate("offices")}
             className="flex flex-col items-center p-4 bg-white rounded-2xl border border-gray-50 shadow-sm hover:bg-gray-50 transition-colors cursor-pointer group"
           >
             <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-full flex items-center justify-center group-hover:bg-orange-600 group-hover:text-white transition-colors">

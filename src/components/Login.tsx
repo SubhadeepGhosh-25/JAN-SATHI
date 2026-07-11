@@ -433,41 +433,6 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     }
   };
 
-  // -------- DEMO BYPASS SIGN IN FLOW --------
-  const handleDemoLogin = async () => {
-    setError(null);
-    if (!fullName.trim()) {
-      setError("Please enter your Full Name first to initialize your custom profile.");
-      return;
-    }
-    setLoading(true);
-    try {
-      // Sign in anonymously first to get a valid user UID for Firebase Firestore operations
-      try {
-        await signInAnonymously(auth);
-      } catch (anonErr) {
-        console.warn("Could not sign in anonymously for sandbox bypass:", anonErr);
-      }
-      onLoginSuccess({
-        name: fullName.trim(),
-        phone: mobileNumber ? `+91 ${mobileNumber}` : "+91 9876543210",
-        email: "demo@jansathi.gov.in"
-      });
-    } catch (err: any) {
-      console.error("Demo login error:", err);
-      setError("Demo login failed. Trying quick local guest mode...");
-      setTimeout(() => {
-        onLoginSuccess({
-          name: fullName.trim() || "Citizen (Guest)",
-          phone: mobileNumber ? `+91 ${mobileNumber}` : "+91 9876543210",
-          email: "guest@jansathi.gov.in"
-        });
-      }, 1000);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="bg-[#f7f9fb] min-h-screen flex flex-col md:justify-center items-center relative overflow-hidden font-sans text-[#191c1e] p-4">
       {/* Invisible Recaptcha anchor */}
@@ -530,43 +495,6 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 <span className="font-semibold">{error}</span>
               </div>
               
-              {/* Intelligent helper for email rate-limiting */}
-              {(error.toLowerCase().includes("rate limit") || 
-                error.toLowerCase().includes("exceeded") || 
-                error.toLowerCase().includes("security purposes") || 
-                error.toLowerCase().includes("too many") ||
-                error.toLowerCase().includes("60 seconds") ||
-                error.toLowerCase().includes("request this once")) && (
-                <div className="mt-1 p-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-[11px] leading-relaxed">
-                  <p className="font-bold mb-1">💡 Sandbox Guidance:</p>
-                  <p className="mb-2">
-                    To safeguard resources, external providers rate-limit authentication. You can instantly bypass this restriction and log in immediately by entering your name and clicking <strong>Instant Sandbox Bypass</strong>.
-                  </p>
-                  <div className="flex flex-col gap-1.5 mt-2">
-                    {!fullName && (
-                      <input
-                        type="text"
-                        placeholder="Type your name first..."
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        className="w-full h-8 px-2.5 bg-white border border-amber-300 rounded-md text-[11px] outline-none text-gray-800 focus:border-[#004d99]"
-                      />
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!fullName) {
-                          setFullName("Citizen");
-                        }
-                        handleDemoLogin();
-                      }}
-                      className="w-full h-8 bg-[#004d99] hover:bg-[#003c78] text-white rounded-md font-bold transition-all text-[11px] cursor-pointer"
-                    >
-                      🚀 Bypass and Log In Now
-                    </button>
-                  </div>
-                </div>
-              )}
             </motion.div>
           )}
 
@@ -658,16 +586,6 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                     {loading ? "Sending..." : "Get OTP"}
                   </button>
                 </form>
-
-                <button
-                  type="button"
-                  onClick={handleDemoLogin}
-                  disabled={loading}
-                  className="w-full h-12 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:from-emerald-800 active:to-teal-800 text-white rounded-full flex items-center justify-center gap-2.5 font-semibold shadow-md transition-all cursor-pointer"
-                >
-                  <Sparkles className="w-5 h-5" />
-                  <span>Instant Sandbox Bypass</span>
-                </button>
 
                 {/* Divider */}
                 <div className="flex items-center gap-3 my-1">
@@ -903,16 +821,6 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                     {isSignUp ? "Already have an account? Sign In" : "New to JanSathi? Create an Account"}
                   </button>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleDemoLogin}
-                  disabled={loading}
-                  className="w-full h-11 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:from-emerald-800 active:to-teal-800 text-white rounded-full flex items-center justify-center gap-2.5 font-semibold shadow-md transition-all cursor-pointer text-sm"
-                >
-                  <Sparkles className="w-5 h-5" />
-                  <span>Instant Sandbox Bypass</span>
-                </button>
 
                 {/* Divider */}
                 <div className="flex items-center gap-3 my-1">

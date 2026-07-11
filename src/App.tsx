@@ -54,6 +54,7 @@ import FamilyProfiles from "./components/FamilyProfiles";
 import FormAssistance from "./components/FormAssistance";
 import RemindersList from "./components/RemindersList";
 import ProfileView from "./components/ProfileView";
+import NearbyOffices from "./components/NearbyOffices";
 
 export default function App() {
   // Navigation State
@@ -554,6 +555,14 @@ export default function App() {
                   >
                     {t("nav.family")}
                   </button>
+                  <button 
+                    onClick={() => handleTabNavigation("offices")}
+                    className={`h-10 px-4 rounded-xl transition-colors cursor-pointer ${
+                      activeTab === "offices" ? "bg-[#004d99]/5 text-[#004d99]" : "text-gray-500 hover:text-gray-900"
+                    }`}
+                  >
+                    {t("action.nearby_offices")}
+                  </button>
                 </nav>
 
                 {/* Right utility items */}
@@ -687,6 +696,10 @@ export default function App() {
                         onUpdateLanguage={(lang) => saveProfile({ ...userProfile, preferredLanguage: lang })}
                         onLogout={handleLogout}
                       />
+                    )}
+
+                    {activeTab === "offices" && (
+                      <NearbyOffices preferredLanguage={userProfile.preferredLanguage} />
                     )}
                   </motion.div>
                 )}
