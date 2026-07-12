@@ -179,16 +179,36 @@ export default function App() {
 
         setLoading(true);
         try {
+          // Load all dynamic user and scheme assets in parallel to optimize startup time and handle connection states robustly
+          const [
+            dbSchemes,
+            profile,
+            savedIds,
+            docs,
+            apps,
+            fam,
+            rems,
+            nots
+          ] = await Promise.all([
+            getSchemes().catch((err) => { console.warn("Could not load schemes:", err); return null; }),
+            getUserProfile(user.uid).catch((err) => { console.warn("Could not load profile:", err); return null; }),
+            getSavedSchemeIds(user.uid).catch((err) => { console.warn("Could not load saved scheme IDs:", err); return []; }),
+            getUserDocuments(user.uid).catch((err) => { console.warn("Could not load documents:", err); return []; }),
+            getApplications(user.uid).catch((err) => { console.warn("Could not load applications:", err); return []; }),
+            getFamilyMembers(user.uid).catch((err) => { console.warn("Could not load family members:", err); return []; }),
+            getReminders(user.uid).catch((err) => { console.warn("Could not load reminders:", err); return []; }),
+            getNotifications(user.uid).catch((err) => { console.warn("Could not load notifications:", err); return []; })
+          ]);
+
           // 1. Load dynamic government schemes
-          const dbSchemes = await getSchemes();
           if (dbSchemes && dbSchemes.length > 0) {
             setSchemes(dbSchemes);
           }
 
           // 2. Load or create user profile
-          let profile = await getUserProfile(user.uid);
-          if (!profile) {
-            profile = {
+          let finalProfile = profile;
+          if (!finalProfile) {
+            finalProfile = {
               name: session.user?.user_metadata?.full_name || user.displayName || "Citizen",
               email: session.user?.email || user.email || "",
               phone: session.user?.user_metadata?.phone || user.phoneNumber || "",
@@ -203,42 +223,39 @@ export default function App() {
               disability: false,
               preferredLanguage: "English"
             };
-            await saveUserProfile(user.uid, profile);
+            // Try saving in the background; do not block startup
+            saveUserProfile(user.uid, finalProfile).catch(err => {
+              console.warn("Could not persist initial user profile to Firestore:", err);
+            });
           }
-          setUserProfile(profile);
+          setUserProfile(finalProfile);
 
           // 3. Load saved/bookmarked schemes
-          const savedIds = await getSavedSchemeIds(user.uid);
           if (savedIds && savedIds.length > 0) {
             setSavedSchemeIds(savedIds);
           }
 
           // 4. Load uploaded documents from vault
-          const docs = await getUserDocuments(user.uid);
           if (docs && docs.length > 0) {
             setDocuments(docs);
           }
 
           // 5. Load submitted applications
-          const apps = await getApplications(user.uid);
           if (apps && apps.length > 0) {
             setApplications(apps);
           }
 
           // 6. Load family members
-          const fam = await getFamilyMembers(user.uid);
           if (fam && fam.length > 0) {
             setFamilyMembers(fam);
           }
 
           // 7. Load reminders
-          const rems = await getReminders(user.uid);
           if (rems && rems.length > 0) {
             setReminders(rems);
           }
 
           // 8. Load notifications
-          const nots = await getNotifications(user.uid);
           if (nots && nots.length > 0) {
             setNotifications(nots);
           }
